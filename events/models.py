@@ -40,7 +40,7 @@ class Event(SoftDeleteModel):
     description = models.TextField(help_text="Rich text content (HTML)")
     
     # Store attendance details (current, capacity, waitlist, vips)
-    attendance = models.JSONField(default=dict)
+    attendance = models.JSONField(default=dict, blank=True)
     
     # Track registered users (ManyToManyField)
     attendees = models.ManyToManyField(

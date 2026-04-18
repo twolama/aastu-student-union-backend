@@ -28,7 +28,7 @@ class Announcement(SoftDeleteModel):
     image = models.ImageField(upload_to='announcements/', null=True, blank=True)
     
     # Simple list of searchable tags
-    tags = models.JSONField(default=list)
+    tags = models.JSONField(default=list, blank=True)
     
     # Store main body as rich text (HTML)
     body = models.TextField(help_text="Rich text content (HTML)")

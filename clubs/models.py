@@ -33,7 +33,7 @@ class Club(SoftDeleteModel):
     advisor_name = models.CharField(max_length=255, blank=True)
     
     # Store social/external links (website, externalMembership)
-    links = models.JSONField(default=dict)
+    links = models.JSONField(default=dict, blank=True)
 
     class Meta(SoftDeleteModel.Meta):
         verbose_name = 'Club'

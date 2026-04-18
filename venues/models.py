@@ -19,10 +19,10 @@ class Venue(SoftDeleteModel):
     image_url = models.URLField(null=True, blank=True)
     
     # List of amenities (Audio, Wifi, Projector etc.)
-    amenities = models.JSONField(default=list)
+    amenities = models.JSONField(default=list, blank=True)
     
     # Store contact details (name, role, phone, email)
-    contact = models.JSONField(default=dict)
+    contact = models.JSONField(default=dict, blank=True)
 
     class Meta(SoftDeleteModel.Meta):
         verbose_name = 'Venue'
