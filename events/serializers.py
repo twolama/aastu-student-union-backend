@@ -24,7 +24,7 @@ class EventSerializer(serializers.ModelSerializer):
             'id', 'title', 'summary', 'status', 'is_mega_event',
             'organizing_club', 'venue', 'cover_image',
             'schedule_date', 'schedule_time_range', 'date_day', 'date_month',
-            'about_paragraphs', 'attendance', 'attendees', 'attendee_count',
+            'description', 'attendance', 'attendees', 'attendee_count',
             'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'date_day', 'date_month', 'attendee_count')
@@ -37,10 +37,22 @@ class EventSerializer(serializers.ModelSerializer):
     def get_date_month(self, obj):
         return obj.schedule_date.strftime("%b").upper() if obj.schedule_date else None
 
-    def validate_about_paragraphs(self, value):
-        if not isinstance(value, list) or not all(isinstance(x, str) for x in value):
-            raise serializers.ValidationError("Must be a list of strings (paragraphs).")
-        return value
+    def to_internal_value(self, data):
+        """
+        Support attendance as JSON-string for multipart/form-data.
+        """
+        import json
+        if hasattr(data, 'dict'):
+             data = data.copy()
+
+        attendance = data.get('attendance')
+        if isinstance(attendance, str):
+            try:
+                data['attendance'] = json.loads(attendance)
+            except (ValueError, TypeError):
+                 pass
+
+        return super().to_internal_value(data)
 
     def validate_attendance(self, value):
         required = ['current', 'capacity']

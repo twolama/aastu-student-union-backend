@@ -36,8 +36,8 @@ class Event(SoftDeleteModel):
     schedule_date = models.DateField()
     schedule_time_range = models.CharField(max_length=100) # e.g., "09:00 AM - 05:00 PM"
     
-    # Store about sections as paragraphs in JSON
-    about_paragraphs = models.JSONField(default=list)
+    # Store description as rich text (HTML)
+    description = models.TextField(help_text="Rich text content (HTML)")
     
     # Store attendance details (current, capacity, waitlist, vips)
     attendance = models.JSONField(default=dict)

@@ -21,20 +21,29 @@ class ClubSerializer(serializers.ModelSerializer):
         model = Club
         fields = (
             'id', 'name', 'status', 'category_label', 'location_label',
-            'logo_label', 'cover_image', 'logo', 'about', 'president',
+            'logo_label', 'cover_image', 'logo', 'description', 'president',
             'advisor_name', 'links', 'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'created_at', 'updated_at')
 
-    def validate_about(self, value):
+    def to_internal_value(self, data):
         """
-        Ensure about is a list of strings (paragraphs) for the frontend.
+        Support 'links' as a JSON-string for multipart/form-data.
         """
-        if not isinstance(value, list):
-            raise serializers.ValidationError("About must be a list of strings (paragraphs).")
-        if not all(isinstance(item, str) for item in value):
-            raise serializers.ValidationError("Every item in the paragraphs list must be a string.")
-        return value
+        import json
+        
+        # Make data mutable if it's a QueryDict (like from multipart/form-data)
+        if hasattr(data, 'dict'):
+             data = data.copy()
+
+        links = data.get('links')
+        if isinstance(links, str):
+            try:
+                data['links'] = json.loads(links)
+            except (ValueError, TypeError):
+                 pass # Let DRF's validation capture the error below if needed
+
+        return super().to_internal_value(data)
 
     def validate_links(self, value):
         """

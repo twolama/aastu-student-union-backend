@@ -20,8 +20,8 @@ class Club(SoftDeleteModel):
     cover_image = models.ImageField(upload_to='clubs/covers/', null=True, blank=True)
     logo = models.ImageField(upload_to='clubs/logos/', null=True, blank=True)
     
-    # Store about as a list of paragraphs in JSON (matching frontend array of paragraphs)
-    about = models.JSONField(default=list)
+    # Store description as rich text (HTML)
+    description = models.TextField(help_text="Rich text content (HTML)")
     
     president = models.ForeignKey(
         settings.AUTH_USER_MODEL,

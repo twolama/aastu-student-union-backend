@@ -29,7 +29,7 @@ class ClubAdmin(admin.ModelAdmin):
             'fields': ('id', 'name', 'status', 'category_label', 'location_label')
         }),
         (_('Club Details'), {
-            'fields': ('president', 'advisor_name', 'about', 'links')
+            'fields': ('president', 'advisor_name', 'description', 'links')
         }),
         (_('Media Assets'), {
             'fields': ('logo', 'cover_image')

@@ -30,11 +30,11 @@ class Announcement(SoftDeleteModel):
     # Simple list of searchable tags
     tags = models.JSONField(default=list)
     
-    # Store procedure steps if this announcement provides instructions
-    procedure_steps = models.JSONField(default=list)
+    # Store main body as rich text (HTML)
+    body = models.TextField(help_text="Rich text content (HTML)")
     
-    # Store additional content paragraphs
-    content_paragraphs = models.JSONField(default=list)
+    # Optional field for instruction steps (can also be merged into rich text body)
+    procedure_steps = models.JSONField(default=list, blank=True)
 
     class Meta(SoftDeleteModel.Meta):
         verbose_name = 'Announcement'

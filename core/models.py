@@ -20,6 +20,10 @@ class BaseModel(models.Model):
         abstract = True
         ordering = ['-created_at']
 
+    @property
+    def created_at_formatted(self):
+        return self.created_at.strftime("%Y-%m-%d") if self.created_at else ""
+
 class SoftDeleteModel(BaseModel):
     """
     Abstract model for soft-delete logic.
