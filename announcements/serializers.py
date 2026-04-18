@@ -15,7 +15,7 @@ class AnnouncementSerializer(serializers.ModelSerializer):
         model = Announcement
         fields = (
             'id', 'title', 'summary', 'category', 'author', 'author_name', 
-            'author_role', 'image_url', 'tags', 'procedure_steps', 
+            'author_role', 'image', 'tags', 'procedure_steps', 
             'content_paragraphs', 'published_date', 'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'published_date', 'author_role')

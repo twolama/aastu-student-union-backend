@@ -28,7 +28,7 @@ class AnnouncementAdmin(admin.ModelAdmin):
             'fields': ('author', 'author_name', 'tags')
         }),
         (_('Announcement Content'), {
-            'fields': ('image_url', 'content_paragraphs', 'procedure_steps')
+            'fields': ('image', 'content_paragraphs', 'procedure_steps')
         }),
         (_('Audit Info'), {
             'fields': ('is_active', 'deleted_at', 'created_at', 'updated_at'),

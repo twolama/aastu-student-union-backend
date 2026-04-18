@@ -30,7 +30,7 @@ class Event(SoftDeleteModel):
         related_name="hosted_events"
     )
     
-    cover_image_url = models.URLField(null=True, blank=True)
+    cover_image = models.ImageField(upload_to='events/covers/', null=True, blank=True)
     
     # Scheduling
     schedule_date = models.DateField()

@@ -32,7 +32,7 @@ class ClubAdmin(admin.ModelAdmin):
             'fields': ('president', 'advisor_name', 'about', 'links')
         }),
         (_('Media Assets'), {
-            'fields': ('logo_label', 'cover_image_url')
+            'fields': ('logo', 'cover_image')
         }),
         (_('Audit Info'), {
             'fields': ('is_active', 'deleted_at', 'created_at', 'updated_at'),

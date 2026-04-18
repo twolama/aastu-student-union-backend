@@ -4,8 +4,14 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
 from datetime import datetime, timedelta
+from typing import Any, Dict
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.conf import settings
 from .serializers import UserSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
 
 User = get_user_model()
@@ -74,7 +80,37 @@ class ForgotPasswordView(APIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # Logic to send email would go here
+        
+        data: Dict[str, Any] = serializer.validated_data # type: ignore
+        
+        email = data['email']
+        
+        try:
+            user = User.objects.get(email=email)
+            # Generate token and uid
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            
+            # Construct reset link (Frontend URL)
+            reset_link = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+            
+            # Send email
+            # We usegetattr to avoid Pylance issues with custom fields on AbstractUser
+            user_display_name = getattr(user, 'name', user.username)
+            subject = "Password Reset Requested"
+            message = f"Hello {user_display_name},\n\nYou requested a password reset. Click the link below to reset your password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email."
+            
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+        except User.DoesNotExist:
+            # We still return 200 for security reasons (don't reveal registered emails)
+            pass
+
         return Response(
             {"message": "If an account exists with this email, a reset link has been sent."},
             status=status.HTTP_200_OK
@@ -90,11 +126,39 @@ class ResetPasswordView(APIView):
     def post(self, request):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
-        # Logic to verify token and update password would go here
-        return Response(
-            {"message": "Password has been reset successfully."},
-            status=status.HTTP_200_OK
-        )
+        
+        data: Dict[str, Any] = serializer.validated_data # type: ignore
+            
+        uidb64 = data['uidb64']
+        token = data['token']
+        password = data['password']
+
+        try:
+            # Decode user ID
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+            
+            # Check if token is valid
+            if not default_token_generator.check_token(user, token):
+                return Response(
+                    {"error": "Invalid or expired reset link."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            # Set new password
+            user.set_password(password)
+            user.save()
+            
+            return Response(
+                {"message": "Password has been reset successfully."},
+                status=status.HTTP_200_OK
+            )
+            
+        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+            return Response(
+                {"error": "Invalid request."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
 class UserViewSet(viewsets.ModelViewSet):
     """

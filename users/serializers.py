@@ -7,6 +7,7 @@ class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
 class ResetPasswordSerializer(serializers.Serializer):
+    uidb64 = serializers.CharField()
     token = serializers.CharField()
     password = serializers.CharField(min_length=8)
 
@@ -16,11 +17,11 @@ class UserMinimalSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = User
-        fields = ('id', 'name', 'avatar_url', 'initials')
+        fields = ('id', 'name', 'avatar', 'initials')
         read_only_fields = ('id', 'initials')
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'name', 'student_id', 'department', 'role', 'avatar_url', 'email', 'initials')
+        fields = ('id', 'name', 'student_id', 'department', 'role', 'avatar', 'email', 'initials')
         read_only_fields = ('id', 'initials')

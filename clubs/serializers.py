@@ -21,7 +21,7 @@ class ClubSerializer(serializers.ModelSerializer):
         model = Club
         fields = (
             'id', 'name', 'status', 'category_label', 'location_label',
-            'logo_label', 'cover_image_url', 'about', 'president',
+            'logo_label', 'cover_image', 'logo', 'about', 'president',
             'advisor_name', 'links', 'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'created_at', 'updated_at')

@@ -22,7 +22,7 @@ class EventSerializer(serializers.ModelSerializer):
         model = Event
         fields = (
             'id', 'title', 'summary', 'status', 'is_mega_event',
-            'organizing_club', 'venue', 'cover_image_url',
+            'organizing_club', 'venue', 'cover_image',
             'schedule_date', 'schedule_time_range', 'date_day', 'date_month',
             'about_paragraphs', 'attendance', 'attendees', 'attendee_count',
             'created_at', 'updated_at'

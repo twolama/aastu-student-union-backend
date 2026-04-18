@@ -25,7 +25,7 @@ class Announcement(SoftDeleteModel):
     )
     author_name = models.CharField(max_length=255) # Preserving name as fallback or explicit label
     
-    image_url = models.URLField(null=True, blank=True)
+    image = models.ImageField(upload_to='announcements/', null=True, blank=True)
     
     # Simple list of searchable tags
     tags = models.JSONField(default=list)

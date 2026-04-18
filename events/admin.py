@@ -35,7 +35,7 @@ class EventAdmin(admin.ModelAdmin):
             'fields': ('schedule_date', 'schedule_time_range')
         }),
         (_('Internal Assets'), {
-            'fields': ('cover_image_url', 'about_paragraphs', 'attendance')
+            'fields': ('cover_image', 'about_paragraphs', 'attendance')
         }),
         (_('Attendees List'), {
             'fields': ('attendees',),

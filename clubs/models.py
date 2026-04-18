@@ -17,7 +17,8 @@ class Club(SoftDeleteModel):
     category_label = models.CharField(max_length=100) # e.g., "Technology", "Sports"
     location_label = models.CharField(max_length=255) # e.g., "Main Campus, Block 24"
     logo_label = models.CharField(max_length=10, blank=True) # Usually first letter or small identifier
-    cover_image_url = models.URLField(null=True, blank=True)
+    cover_image = models.ImageField(upload_to='clubs/covers/', null=True, blank=True)
+    logo = models.ImageField(upload_to='clubs/logos/', null=True, blank=True)
     
     # Store about as a list of paragraphs in JSON (matching frontend array of paragraphs)
     about = models.JSONField(default=list)

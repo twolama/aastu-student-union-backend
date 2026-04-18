@@ -17,7 +17,7 @@ class User(SoftDeleteModel, AbstractUser):
     student_id = models.CharField(max_length=50, unique=True)
     department = models.CharField(max_length=100)
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='general-student')
-    avatar_url = models.URLField(null=True, blank=True)
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     
     # We use email as second identity but keep username for legacy/internal auth
     email = models.EmailField(unique=True)
