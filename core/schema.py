@@ -16,6 +16,24 @@ class AASTUAutoSchema(AutoSchema):
             'volunteers': {'type': 'array', 'items': {'type': 'object'}},
             'tags': {'type': 'array', 'items': {'type': 'string'}},
             'procedure_steps': {'type': 'array', 'items': {'type': 'string'}},
+            'amenities': {'type': 'array', 'items': {'type': 'string'}},
+            'contact': {
+                'type': 'object',
+                'properties': {
+                    'name': {'type': 'string'},
+                    'role': {'type': 'string'},
+                    'phone': {'type': 'string'},
+                    'email': {'type': 'string', 'format': 'email'},
+                },
+            },
+            'map_coordinates': {
+                'type': 'object',
+                'properties': {
+                    'lat': {'type': 'number', 'format': 'double'},
+                    'lng': {'type': 'number', 'format': 'double'},
+                },
+            },
+            'equipment_requested': {'type': 'array', 'items': {'type': 'string'}},
         }
         
         if field.field_name in json_fields:

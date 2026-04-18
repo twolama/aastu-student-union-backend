@@ -1,8 +1,27 @@
 from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Club
-from .serializers import ClubSerializer, ClubListSerializer, ClubDetailSerializer
+from .models import Club, ClubCategory
+from .serializers import (
+    ClubSerializer,
+    ClubListSerializer,
+    ClubDetailSerializer,
+    ClubCategorySerializer,
+)
+
+
+class ClubCategoryViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for club categories.
+    Read access is public; write actions are restricted to admins.
+    """
+    queryset = ClubCategory.objects.filter(is_active=True).order_by('name')
+    serializer_class = ClubCategorySerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
 class ClubViewSet(viewsets.ModelViewSet):
     """

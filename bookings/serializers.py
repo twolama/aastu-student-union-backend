@@ -45,7 +45,8 @@ class BookingDetailSerializer(serializers.ModelSerializer):
         model = Booking
         fields = (
             'id', 'id_label', 'requester', 'club', 'venue', 'venue_name', 'venue_type',
-            'status', 'purpose', 'requested_date_iso', 'time_range',
+            'status', 'purpose', 'expected_attendance', 'equipment_requested',
+            'special_requests', 'requested_date_iso', 'time_range',
             'capacity_label', 'date_label', 'event', 'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'id_label', 'event', 'created_at', 'updated_at')

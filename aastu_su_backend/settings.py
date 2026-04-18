@@ -75,6 +75,9 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+# Allow same-origin iframes so Jazzmin related-object modal forms (+ icon) can render.
+X_FRAME_OPTIONS = 'SAMEORIGIN'
+
 ROOT_URLCONF = 'aastu_su_backend.urls'
 
 TEMPLATES = [
@@ -296,7 +299,8 @@ JAZZMIN_SETTINGS = {
     },
     "default_icon_parents": "fas fa-chevron-circle-right",
     "default_icon_children": "fas fa-circle",
-    "related_modal_active": True,
+    # Use classic popup for related-object (+) forms to avoid compressed modal layout.
+    "related_modal_active": False,
     "use_google_fonts_cdn": True,
     "show_ui_builder": False,
     "changeform_format": "horizontal_tabs",

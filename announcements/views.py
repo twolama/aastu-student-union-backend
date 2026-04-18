@@ -1,9 +1,24 @@
 from rest_framework import viewsets, permissions, filters, serializers
 from django_filters.rest_framework import DjangoFilterBackend
-from .models import Announcement
+from .models import Announcement, AnnouncementCategory
 from .serializers import (
-    AnnouncementSerializer, AnnouncementListSerializer, AnnouncementDetailSerializer
+    AnnouncementSerializer, AnnouncementListSerializer, AnnouncementDetailSerializer,
+    AnnouncementCategorySerializer
 )
+
+
+class AnnouncementCategoryViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for announcement categories.
+    Read access is public; write actions are restricted to admins.
+    """
+    queryset = AnnouncementCategory.objects.filter(is_active=True).order_by('name')
+    serializer_class = AnnouncementCategorySerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
 class AnnouncementViewSet(viewsets.ModelViewSet):
     """

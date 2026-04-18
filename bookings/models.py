@@ -35,6 +35,11 @@ class Booking(SoftDeleteModel):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     purpose = models.TextField()
     
+    # Requirements
+    expected_attendance = models.PositiveIntegerField(default=0)
+    equipment_requested = models.JSONField(default=list, blank=True)
+    special_requests = models.TextField(blank=True)
+
     # Scheduling
     requested_date_iso = models.DateTimeField() # e.g., "2024-10-24T00:00:00.000Z"
     time_range = models.CharField(max_length=100) # e.g., "14:00 - 17:30"

@@ -1,8 +1,23 @@
 from rest_framework import viewsets, permissions, serializers
-from .models import Venue
+from .models import Venue, VenueImage, VenueCategory
 from .serializers import (
-    VenueSerializer, VenueListSerializer, VenueDetailSerializer
+    VenueSerializer, VenueListSerializer, VenueDetailSerializer,
+    VenueImageSerializer, VenueCategorySerializer
 )
+
+
+class VenueCategoryViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for venue categories.
+    Read access is public; write actions are restricted to admins.
+    """
+    queryset = VenueCategory.objects.all().order_by('name')
+    serializer_class = VenueCategorySerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
 class VenueViewSet(viewsets.ModelViewSet):
     """
@@ -25,4 +40,13 @@ class VenueViewSet(viewsets.ModelViewSet):
         if status:
             queryset = queryset.filter(status=status)
         return queryset
+
+class VenueImageViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for handling venue gallery images.
+    """
+    queryset = VenueImage.objects.all()
+    serializer_class = VenueImageSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
 

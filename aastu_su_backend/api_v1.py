@@ -5,22 +5,26 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 from users.views import UserViewSet, ForgotPasswordView, ResetPasswordView, CustomTokenObtainPairView
-from announcements.views import AnnouncementViewSet
+from announcements.views import AnnouncementViewSet, AnnouncementCategoryViewSet
 from core.views import SystemStatsView, HealthCheckView
 from bookings.views import BookingViewSet
-from clubs.views import ClubViewSet
+from clubs.views import ClubViewSet, ClubCategoryViewSet
 from events.views import EventViewSet, EventVolunteerViewSet
 from users.views import UserViewSet
-from venues.views import VenueViewSet
+from venues.views import VenueViewSet, VenueImageViewSet, VenueCategoryViewSet
 
 router = DefaultRouter()
 router.register(r'announcements', AnnouncementViewSet)
+router.register(r'announcement-categories', AnnouncementCategoryViewSet)
 router.register(r'bookings', BookingViewSet)
 router.register(r'clubs', ClubViewSet)
+router.register(r'club-categories', ClubCategoryViewSet)
 router.register(r'events', EventViewSet)
 router.register(r'volunteers', EventVolunteerViewSet, basename='volunteer')
 router.register(r'users', UserViewSet)
 router.register(r'venues', VenueViewSet)
+router.register(r'venue-categories', VenueCategoryViewSet)
+router.register(r'venue-gallery', VenueImageViewSet)
 
 urlpatterns = [
     # Auth endpoints
