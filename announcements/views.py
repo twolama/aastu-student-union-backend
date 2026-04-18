@@ -50,3 +50,6 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(tags__contains=[tag])
         return queryset
 
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
+

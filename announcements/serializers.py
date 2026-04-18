@@ -23,7 +23,7 @@ class AnnouncementListSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'title', 'body_excerpt', 'category', 'category_details',
             'is_pinned', 'author', 'author_name', 
-            'author_role_name', 'image', 'tags', 
+            'author_role_name', 'image', 'tags', 'procedure_steps',
             'published_date', 'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'published_date', 'author_role_name', 'category_details')
@@ -57,7 +57,7 @@ class AnnouncementSerializer(AnnouncementDetailSerializer):
         if hasattr(data, 'dict'):
              data = data.copy()
 
-        for field in ['tags']:
+        for field in ['tags', 'procedure_steps']:
             val = data.get(field)
             if isinstance(val, str):
                 try:

@@ -66,6 +66,7 @@ class UserSerializer(serializers.ModelSerializer):
             'phone_number',
             'initials',
             'username',
+            'bio',
         )
         read_only_fields = ('id', 'initials')
         extra_kwargs = {
@@ -135,6 +136,7 @@ class SelfProfileSerializer(serializers.ModelSerializer):
             'role',
             'role_details',
             'initials',
+            'bio',
         )
         read_only_fields = (
             'id',

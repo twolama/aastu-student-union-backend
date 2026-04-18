@@ -13,7 +13,7 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
 from .models import Role
 from .serializers import (
     UserSerializer, UserDetailSerializer, SelfProfileSerializer,
@@ -47,12 +47,13 @@ class CustomTokenObtainPairView(TokenObtainPairView):
         try:
             serializer.is_valid(raise_exception=True)
         except Exception as e:
+            error_message = str(e)
             return Response({
                 "success": False,
-                "message": "Login failed",
+                "message": error_message,
                 "data": None,
                 "statusCode": 401,
-                "error": str(e)
+                "error": error_message
             }, status=status.HTTP_401_UNAUTHORIZED)
 
         user = serializer.user
@@ -202,6 +203,13 @@ class ChangePasswordView(APIView):
             status=status.HTTP_200_OK,
         )
 
+@extend_schema(
+    parameters=[
+        OpenApiParameter("search", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Search by name, student ID, email or username"),
+        OpenApiParameter("role", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by role ID or slug"),
+        OpenApiParameter("department", OpenApiTypes.STR, OpenApiParameter.QUERY, description="Filter by department ID"),
+    ]
+)
 class UserViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
@@ -252,10 +260,31 @@ class UserViewSet(viewsets.ModelViewSet):
             print(f"Failed to send invitation email: {e}")
 
     def get_queryset(self):
-        # Allow filtering by role or department if needed
-        queryset = super().get_queryset()
+        queryset = self.queryset
+        
+        # Filter by role (UUID or slug)
         role = self.request.query_params.get('role')
-        if role:
-            queryset = queryset.filter(role=role)
-        return queryset
+        if role and role != 'all':
+            if len(role) > 30: # Likely a UUID
+                queryset = queryset.filter(role_id=role)
+            else:
+                queryset = queryset.filter(role__slug=role)
+
+        # Filter by department
+        department = self.request.query_params.get('department')
+        if department and department != 'all':
+            queryset = queryset.filter(department_id=department)
+
+        # Search functionality
+        search = self.request.query_params.get('search')
+        if search:
+            from django.db.models import Q
+            queryset = queryset.filter(
+                Q(name__icontains=search) | 
+                Q(student_id__icontains=search) | 
+                Q(email__icontains=search) |
+                Q(username__icontains=search)
+            )
+
+        return queryset.order_by('name')
 

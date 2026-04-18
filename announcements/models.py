@@ -38,7 +38,7 @@ class Announcement(SoftDeleteModel):
         blank=True,
         related_name="announcements_authored"
     )
-    author_name = models.CharField(max_length=255) # Preserving name as fallback or explicit label
+    author_name = models.CharField(max_length=255, blank=True) # Preserving name as fallback or explicit label
     
     image = models.ImageField(upload_to='announcements/', null=True, blank=True)
     
