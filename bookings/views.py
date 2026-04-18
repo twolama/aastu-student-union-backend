@@ -1,8 +1,9 @@
-from rest_framework import viewsets, permissions, status
+from django.db.models import Q
+from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Booking
-from .serializers import BookingSerializer
+from .serializers import BookingSerializer, BookingListSerializer, BookingDetailSerializer
 
 class BookingViewSet(viewsets.ModelViewSet):
     """
@@ -12,15 +13,28 @@ class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def get_serializer_class(self): # type: ignore
+        if self.action == 'list':
+            return BookingListSerializer
+        if self.action == 'retrieve':
+            return BookingDetailSerializer
+        return BookingSerializer
+
     def get_queryset(self):
         queryset = super().get_queryset()
         user = self.request.user
         
+        # Ensure user has role and role has slug
+        if not hasattr(user, 'role') or not user.role:
+            return queryset.none()
+
+        role_slug = user.role.slug
+        
         # Students should only see their own requests or their club's requests
-        if user.role == 'general-student':
+        if role_slug == 'general-student':
              queryset = queryset.filter(requester=user)
-        elif user.role == 'club-president':
-             queryset = queryset.filter(models.Q(requester=user) | models.Q(club__president=user))
+        elif role_slug == 'club-president':
+             queryset = queryset.filter(Q(requester=user) | Q(club__president=user))
              
         # Admin can filter by status
         status_param = self.request.query_params.get('status')
@@ -40,7 +54,7 @@ class BookingViewSet(viewsets.ModelViewSet):
         """
         booking = self.get_object()
         if booking.status != 'pending':
-            return Response({'error': 'Booking is not in pending state'}, status=status.HTTP_400_BAD_MESSAGE)
+            return Response({'error': 'Booking is not in pending state'}, status=status.HTTP_400_BAD_REQUEST)
             
         booking.status = 'approved'
         booking.save()

@@ -1,7 +1,9 @@
-from rest_framework import viewsets, permissions, filters
+from rest_framework import viewsets, permissions, filters, serializers
 from django_filters.rest_framework import DjangoFilterBackend
 from .models import Announcement
-from .serializers import AnnouncementSerializer
+from .serializers import (
+    AnnouncementSerializer, AnnouncementListSerializer, AnnouncementDetailSerializer
+)
 
 class AnnouncementViewSet(viewsets.ModelViewSet):
     """
@@ -12,10 +14,17 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
     serializer_class = AnnouncementSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     
+    def get_serializer_class(self): # type: ignore
+        if self.action == 'list':
+            return AnnouncementListSerializer
+        if self.action == 'retrieve':
+            return AnnouncementDetailSerializer
+        return AnnouncementSerializer
+
     # Enable filtering and searching
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ['category', 'author_name']
-    search_fields = ['title', 'summary', 'tags']
+    filterset_fields = ['category__slug', 'author__username']
+    search_fields = ['title', 'summary']
     ordering_fields = ['created_at', 'title']
 
     def get_queryset(self):

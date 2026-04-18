@@ -1,6 +1,12 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from .models import Announcement
+from .models import Announcement, AnnouncementCategory
+
+@admin.register(AnnouncementCategory)
+class AnnouncementCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'is_active', 'created_at']
+    prepopulated_fields = {'slug': ('name',)}
+    search_fields = ['name']
 
 @admin.action(description='Mark selected announcements as active')
 def set_active(modeladmin, request, queryset):
@@ -8,21 +14,21 @@ def set_active(modeladmin, request, queryset):
 
 @admin.register(Announcement)
 class AnnouncementAdmin(admin.ModelAdmin):
-    list_display = ['id', 'title', 'category', 'author_name', 'is_active', 'created_at']
+    list_display = ['id', 'title', 'category', 'is_pinned', 'author_name', 'is_active', 'created_at']
     list_display_links = ['title']
-    list_filter = ['category', 'is_active', 'created_at']
+    list_filter = ['category', 'is_pinned', 'is_active', 'created_at']
     search_fields = ['title', 'summary', 'author_name', 'tags']
-    ordering = ['-created_at']
+    ordering = ['-is_pinned', '-created_at']
     list_per_page = 25
-    list_editable = ['is_active']
+    list_editable = ['is_active', 'is_pinned']
     actions = [set_active]
 
     readonly_fields = ['id', 'created_at', 'updated_at', 'deleted_at']
-    autocomplete_fields = ['author']
+    autocomplete_fields = ['author', 'category']
 
     fieldsets = [
         (_('Header'), {
-            'fields': ('id', 'title', 'summary', 'category')
+            'fields': ('id', 'title', 'summary', 'category', 'is_pinned')
         }),
         (_('Author & Tags'), {
             'fields': ('author', 'author_name', 'tags')

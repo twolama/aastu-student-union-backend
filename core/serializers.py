@@ -1,4 +1,18 @@
 from rest_framework import serializers
+from .models import College, Department
+
+class CollegeMinimalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = College
+        fields = ('id', 'name', 'abbreviation')
+
+class DepartmentSerializer(serializers.ModelSerializer):
+    college_details = CollegeMinimalSerializer(source='college', read_only=True)
+    
+    class Meta:
+        model = Department
+        fields = ('id', 'name', 'slug', 'college', 'college_details')
+        read_only_fields = ('college_details',)
 
 class CpuStatsSerializer(serializers.Serializer):
     cores = serializers.IntegerField()

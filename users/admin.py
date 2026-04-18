@@ -1,7 +1,13 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import User
+from .models import User, Role
+
+@admin.register(Role)
+class RoleAdmin(admin.ModelAdmin):
+    list_display = ('name', 'slug', 'is_staff_role', 'group')
+    prepopulated_fields = {'slug': ('name',)}
+    search_fields = ('name', 'slug')
 
 @admin.action(description='Mark selected users as active')
 def make_active(modeladmin, request, queryset):
@@ -22,11 +28,12 @@ class CustomUserAdmin(UserAdmin):
     actions = [make_active, make_inactive]
 
     readonly_fields = ['id', 'created_at', 'updated_at', 'deleted_at']
+    autocomplete_fields = ['role', 'department']
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),
-        (_('Personal info'), {'fields': ('name', 'email', 'avatar')}),
-        (_('Student Info'), {'fields': ('student_id', 'department', 'role')}),
+        (_('Personal info'), {'fields': ('name', 'email', 'avatar', 'phone_number')}),
+        (_('Student Info'), {'fields': ('student_id', 'department', 'role', 'dorm_block', 'dorm_room')}),
         (_('Permissions'), {
             'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions'),
         }),
@@ -38,9 +45,9 @@ class CustomUserAdmin(UserAdmin):
     )
 
     add_fieldsets = UserAdmin.add_fieldsets + (
-        (_('Student Info'), {'fields': ('name', 'student_id', 'department', 'role', 'email')}),
+        (_('Student Info'), {'fields': ('name', 'student_id', 'department', 'role', 'email', 'phone_number')}),
     )
 
     def get_queryset(self, request):
-        return super().get_queryset(request)
+        return super().get_queryset(request).select_related('role', 'department')
 

@@ -1,33 +1,53 @@
-from rest_framework import viewsets, permissions, status
+from django.utils import timezone
+from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from .models import Event
-from .serializers import EventSerializer
+from drf_spectacular.utils import extend_schema
+from .models import Event, EventVolunteer
+from .serializers import (
+    EventSerializer, EventListSerializer, EventDetailSerializer, EventVolunteerSerializer
+)
 
 class EventViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows events to be viewed or edited.
     """
-    queryset = Event.objects.filter(is_active=True).select_related('organizing_club', 'venue').prefetch_related('attendees')
+    queryset = Event.objects.filter(is_active=True).select_related('organizing_club', 'venue').prefetch_related('attendees', 'volunteers')
     serializer_class = EventSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_serializer_class(self): # type: ignore
+        if self.action == 'list':
+            return EventListSerializer
+        if self.action == 'retrieve':
+            return EventDetailSerializer
+        return EventSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
         status_param = self.request.query_params.get('status')
         club = self.request.query_params.get('club')
+        now = timezone.now()
         
-        # Special filtering for frontend "Live Now" or "Upcoming" sections
+        # Determine status dynamically for queries to ensure real-time accuracy
         if status_param == 'live-now':
-            queryset = queryset.filter(status='live-now')
+            queryset = queryset.filter(
+                start_date_time__lte=now,
+                end_date_time__gte=now
+            )
         elif status_param == 'upcoming':
-            queryset = queryset.filter(status='upcoming')
+            queryset = queryset.filter(start_date_time__gt=now)
+        elif status_param == 'archived':
+            queryset = queryset.filter(end_date_time__lt=now)
+        elif status_param:
+            queryset = queryset.filter(status=status_param)
         
         if club:
             queryset = queryset.filter(organizing_club_id=club)
             
-        return queryset.order_by('schedule_date')
+        return queryset.order_by('start_date_time')
 
+    @extend_schema(request=None)
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def attend(self, request, pk=None):
         """
@@ -51,11 +71,36 @@ class EventViewSet(viewsets.ModelViewSet):
             current = att.get('current', 0)
             
             if capacity > 0 and current >= capacity:
-                return Response({'error': 'Event is full'}, status=status.HTTP_400_BAD_MESSAGE)
+                return Response({'error': 'Event is full'}, status=status.HTTP_400_BAD_REQUEST)
                 
             event.attendees.add(user)
             att['current'] = current + 1
             event.attendance = att
             event.save()
             return Response({'status': 'attended', 'current': att['current']}, status=status.HTTP_200_OK)
+
+    @extend_schema(request=EventVolunteerSerializer)
+    @action(detail=True, methods=['post'])
+    def volunteer(self, request, pk=None):
+        """
+        Register a volunteer for this event.
+        Requires: full_name, student_id, phone, email, role.
+        """
+        event = self.get_object()
+        serializer = EventVolunteerSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save(event=event)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class EventVolunteerViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing individual volunteers (Edit/Delete).
+    """
+    queryset = EventVolunteer.objects.filter(is_active=True)
+    serializer_class = EventVolunteerSerializer
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    http_method_names = ['get', 'patch', 'delete', 'head', 'options']
 

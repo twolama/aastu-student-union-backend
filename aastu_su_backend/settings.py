@@ -185,6 +185,11 @@ REST_FRAMEWORK = {
         'core.renderers.CoreJSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
+    'DEFAULT_PARSER_CLASSES': (
+        'core.parsers.CoreJSONParser',
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+    ),
     'DEFAULT_PAGINATION_CLASS': 'core.pagination.CorePagination',
     'EXCEPTION_HANDLER': 'core.exceptions.core_exception_handler',
     'DEFAULT_SCHEMA_CLASS': 'core.schema.AASTUAutoSchema',

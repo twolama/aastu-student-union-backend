@@ -1,7 +1,14 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
+from .models import Role
+from core.serializers import DepartmentSerializer
 
 User = get_user_model()
+
+class RoleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Role
+        fields = ('id', 'name', 'slug', 'description', 'is_staff_role')
 
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -39,4 +46,21 @@ class UserSerializer(serializers.ModelSerializer):
         user.set_unusable_password()
         user.save()
         return user
+
+class UserDetailSerializer(UserSerializer):
+    """
+    Detailed user data with expanded department, college and role info.
+    """
+    department_details = DepartmentSerializer(source='department', read_only=True)
+    role_details = RoleSerializer(source='role', read_only=True)
+    
+    class Meta(UserSerializer.Meta):
+        fields = UserSerializer.Meta.fields + (
+            'phone_number', 'dorm_block', 'dorm_room', 
+            'department_details', 'role_details', 'is_active', 
+            'is_staff', 'date_joined', 'last_login'
+        )
+        read_only_fields = UserSerializer.Meta.read_only_fields + (
+            'department_details', 'role_details', 'date_joined', 'last_login'
+        )
 

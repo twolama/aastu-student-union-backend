@@ -1,6 +1,12 @@
 from django.contrib import admin
 from django.utils.translation import gettext_lazy as _
-from .models import Club
+from .models import Club, ClubCategory
+
+@admin.register(ClubCategory)
+class ClubCategoryAdmin(admin.ModelAdmin):
+    list_display = ['name', 'slug', 'is_active', 'created_at']
+    prepopulated_fields = {'slug': ('name',)}
+    search_fields = ['name']
 
 @admin.action(description='Set selected clubs to active')
 def set_active(modeladmin, request, queryset):
@@ -12,24 +18,27 @@ def set_pending(modeladmin, request, queryset):
 
 @admin.register(Club)
 class ClubAdmin(admin.ModelAdmin):
-    list_display = ['id', 'name', 'status', 'category_label', 'president', 'is_active', 'created_at']
+    list_display = ['id', 'name', 'status', 'category', 'president', 'is_active', 'created_at']
     list_display_links = ['name']
-    list_filter = ['status', 'category_label', 'is_active', 'created_at']
-    search_fields = ['name', 'president__name', 'president__student_id', 'advisor_name']
+    list_filter = ['status', 'category', 'is_active', 'created_at']
+    search_fields = ['name', 'president__full_name', 'advisor_name']
     ordering = ['-created_at']
     list_per_page = 30
     list_editable = ['status', 'is_active']
     actions = [set_active, set_pending]
 
     readonly_fields = ['id', 'created_at', 'updated_at', 'deleted_at']
-    autocomplete_fields = ['president']
+    autocomplete_fields = ['president', 'advisor', 'category']
 
     fieldsets = [
         (_('Basic Information'), {
-            'fields': ('id', 'name', 'status', 'category_label', 'location_label')
+            'fields': ('id', 'name', 'status', 'category', 'location_label')
         }),
         (_('Club Details'), {
-            'fields': ('president', 'advisor_name', 'description', 'links')
+            'fields': ('description', 'links')
+        }),
+        (_('Leadership & Advisory'), {
+            'fields': ('president', 'advisor')
         }),
         (_('Media Assets'), {
             'fields': ('logo', 'cover_image')

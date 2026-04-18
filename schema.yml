@@ -1,0 +1,2984 @@
+openapi: 3.0.3
+info:
+  title: AASTU Student Union API
+  version: 1.0.0
+  description: API documentation for the AASTU Student Union website backend.
+paths:
+  /api/v1/announcements/:
+    get:
+      operationId: v1_announcements_list
+      description: |-
+        API endpoint that allows announcements to be viewed or edited.
+        Includes searching by title/tags and categorization filters.
+      parameters:
+      - in: query
+        name: author_name
+        schema:
+          type: string
+      - in: query
+        name: category
+        schema:
+          type: string
+          format: uuid
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: ordering
+        required: false
+        in: query
+        description: Which field to use when ordering the results.
+        schema:
+          type: string
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - name: search
+        required: false
+        in: query
+        description: A search term.
+        schema:
+          type: string
+      tags:
+      - Announcements
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAnnouncementList'
+          description: ''
+    post:
+      operationId: v1_announcements_create
+      description: |-
+        API endpoint that allows announcements to be viewed or edited.
+        Includes searching by title/tags and categorization filters.
+      tags:
+      - Announcements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AnnouncementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AnnouncementRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+          description: ''
+  /api/v1/announcements/{id}/:
+    get:
+      operationId: v1_announcements_retrieve
+      description: |-
+        API endpoint that allows announcements to be viewed or edited.
+        Includes searching by title/tags and categorization filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Announcement.
+        required: true
+      tags:
+      - Announcements
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+          description: ''
+    put:
+      operationId: v1_announcements_update
+      description: |-
+        API endpoint that allows announcements to be viewed or edited.
+        Includes searching by title/tags and categorization filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Announcement.
+        required: true
+      tags:
+      - Announcements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AnnouncementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AnnouncementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AnnouncementRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+          description: ''
+    patch:
+      operationId: v1_announcements_partial_update
+      description: |-
+        API endpoint that allows announcements to be viewed or edited.
+        Includes searching by title/tags and categorization filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Announcement.
+        required: true
+      tags:
+      - Announcements
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAnnouncementRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAnnouncementRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAnnouncementRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Announcement'
+          description: ''
+    delete:
+      operationId: v1_announcements_destroy
+      description: |-
+        API endpoint that allows announcements to be viewed or edited.
+        Includes searching by title/tags and categorization filters.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Announcement.
+        required: true
+      tags:
+      - Announcements
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/auth/forgot-password/:
+    post:
+      operationId: v1_auth_forgot_password_create
+      description: Endpoint to request a password reset email.
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ForgotPasswordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForgotPassword'
+          description: ''
+  /api/v1/auth/login/:
+    post:
+      operationId: v1_auth_login_create
+      description: Custom login view that returns user details and tokens in a specific
+        format.
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/v1/auth/refresh/:
+    post:
+      operationId: v1_auth_refresh_create
+      description: |-
+        Takes a refresh type JSON web token and returns an access type JSON web
+        token if the refresh token is valid.
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/auth/reset-password/:
+    post:
+      operationId: v1_auth_reset_password_create
+      description: Endpoint to reset password using a token.
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPassword'
+          description: ''
+  /api/v1/auth/verify/:
+    post:
+      operationId: v1_auth_verify_create
+      description: |-
+        Takes a token and indicates if it is valid.  This view provides no
+        information about a token's fitness for a particular use.
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenVerifyRequest'
+        required: true
+      responses:
+        '200':
+          description: No response body
+  /api/v1/bookings/:
+    get:
+      operationId: v1_bookings_list
+      description: API endpoint that allows venue bookings to be viewed or edited.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Bookings
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedBookingList'
+          description: ''
+    post:
+      operationId: v1_bookings_create
+      description: API endpoint that allows venue bookings to be viewed or edited.
+      tags:
+      - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+          description: ''
+  /api/v1/bookings/{id}/:
+    get:
+      operationId: v1_bookings_retrieve
+      description: API endpoint that allows venue bookings to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Booking.
+        required: true
+      tags:
+      - Bookings
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+          description: ''
+    put:
+      operationId: v1_bookings_update
+      description: API endpoint that allows venue bookings to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Booking.
+        required: true
+      tags:
+      - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+          description: ''
+    patch:
+      operationId: v1_bookings_partial_update
+      description: API endpoint that allows venue bookings to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Booking.
+        required: true
+      tags:
+      - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedBookingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedBookingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedBookingRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+          description: ''
+    delete:
+      operationId: v1_bookings_destroy
+      description: API endpoint that allows venue bookings to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Booking.
+        required: true
+      tags:
+      - Bookings
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/bookings/{id}/approve/:
+    post:
+      operationId: v1_bookings_approve_create
+      description: Action for admins to approve a booking request.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Booking.
+        required: true
+      tags:
+      - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+          description: ''
+  /api/v1/bookings/{id}/cancel/:
+    post:
+      operationId: v1_bookings_cancel_create
+      description: Action for admins to cancel a booking request.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Booking.
+        required: true
+      tags:
+      - Bookings
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BookingRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+          description: ''
+  /api/v1/clubs/:
+    get:
+      operationId: v1_clubs_list
+      description: API endpoint that allows clubs to be viewed or edited.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Clubs
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedClubList'
+          description: ''
+    post:
+      operationId: v1_clubs_create
+      description: API endpoint that allows clubs to be viewed or edited.
+      tags:
+      - Clubs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClubRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClubRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClubRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Club'
+          description: ''
+  /api/v1/clubs/{id}/:
+    get:
+      operationId: v1_clubs_retrieve
+      description: API endpoint that allows clubs to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Club.
+        required: true
+      tags:
+      - Clubs
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Club'
+          description: ''
+    put:
+      operationId: v1_clubs_update
+      description: API endpoint that allows clubs to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Club.
+        required: true
+      tags:
+      - Clubs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClubRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ClubRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ClubRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Club'
+          description: ''
+    patch:
+      operationId: v1_clubs_partial_update
+      description: API endpoint that allows clubs to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Club.
+        required: true
+      tags:
+      - Clubs
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedClubRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedClubRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedClubRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Club'
+          description: ''
+    delete:
+      operationId: v1_clubs_destroy
+      description: API endpoint that allows clubs to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Club.
+        required: true
+      tags:
+      - Clubs
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/clubs/{id}/upcoming-events/:
+    get:
+      operationId: v1_clubs_upcoming_events_retrieve
+      description: Custom action to fetch upcoming events for a specific club.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Club.
+        required: true
+      tags:
+      - Clubs
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Club'
+          description: ''
+  /api/v1/events/:
+    get:
+      operationId: v1_events_list
+      description: API endpoint that allows events to be viewed or edited.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Events
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventList'
+          description: ''
+    post:
+      operationId: v1_events_create
+      description: API endpoint that allows events to be viewed or edited.
+      tags:
+      - Events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: ''
+  /api/v1/events/{id}/:
+    get:
+      operationId: v1_events_retrieve
+      description: API endpoint that allows events to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event.
+        required: true
+      tags:
+      - Events
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: ''
+    put:
+      operationId: v1_events_update
+      description: API endpoint that allows events to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event.
+        required: true
+      tags:
+      - Events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EventRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: ''
+    patch:
+      operationId: v1_events_partial_update
+      description: API endpoint that allows events to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event.
+        required: true
+      tags:
+      - Events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEventRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEventRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEventRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: ''
+    delete:
+      operationId: v1_events_destroy
+      description: API endpoint that allows events to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event.
+        required: true
+      tags:
+      - Events
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/events/{id}/attend/:
+    post:
+      operationId: v1_events_attend_create
+      description: Toggle attendance for the currently authenticated user.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event.
+        required: true
+      tags:
+      - Events
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: ''
+  /api/v1/events/{id}/volunteer/:
+    post:
+      operationId: v1_events_volunteer_create
+      description: |-
+        Register a volunteer for this event.
+        Requires: full_name, student_id, phone, email, role.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event.
+        required: true
+      tags:
+      - Events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/EventVolunteerRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/EventVolunteerRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/EventVolunteerRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Event'
+          description: ''
+  /api/v1/system/health/:
+    get:
+      operationId: v1_system_health_retrieve
+      description: Quick health check for database and core components.
+      tags:
+      - Admin | Stats
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResponse'
+          description: ''
+  /api/v1/system/stats/:
+    get:
+      operationId: v1_system_stats_retrieve
+      description: Detailed system resource usage (CPU, Memory, Disk, Network).
+      tags:
+      - Admin | Stats
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemStatsResponse'
+          description: ''
+  /api/v1/users/:
+    get:
+      operationId: v1_users_list
+      description: API endpoint that allows users to be viewed or edited.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedUserList'
+          description: ''
+    post:
+      operationId: v1_users_create
+      description: API endpoint that allows users to be viewed or edited.
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+  /api/v1/users/{id}/:
+    get:
+      operationId: v1_users_retrieve
+      description: API endpoint that allows users to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this User.
+        required: true
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    put:
+      operationId: v1_users_update
+      description: API endpoint that allows users to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this User.
+        required: true
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UserRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    patch:
+      operationId: v1_users_partial_update
+      description: API endpoint that allows users to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this User.
+        required: true
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedUserRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/User'
+          description: ''
+    delete:
+      operationId: v1_users_destroy
+      description: API endpoint that allows users to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this User.
+        required: true
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/venues/:
+    get:
+      operationId: v1_venues_list
+      description: API endpoint that allows venues to be viewed or edited.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Venues
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedVenueList'
+          description: ''
+    post:
+      operationId: v1_venues_create
+      description: API endpoint that allows venues to be viewed or edited.
+      tags:
+      - Venues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VenueRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VenueRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VenueRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Venue'
+          description: ''
+  /api/v1/venues/{id}/:
+    get:
+      operationId: v1_venues_retrieve
+      description: API endpoint that allows venues to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Venue.
+        required: true
+      tags:
+      - Venues
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Venue'
+          description: ''
+    put:
+      operationId: v1_venues_update
+      description: API endpoint that allows venues to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Venue.
+        required: true
+      tags:
+      - Venues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VenueRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VenueRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VenueRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Venue'
+          description: ''
+    patch:
+      operationId: v1_venues_partial_update
+      description: API endpoint that allows venues to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Venue.
+        required: true
+      tags:
+      - Venues
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedVenueRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedVenueRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedVenueRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Venue'
+          description: ''
+    delete:
+      operationId: v1_venues_destroy
+      description: API endpoint that allows venues to be viewed or edited.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Venue.
+        required: true
+      tags:
+      - Venues
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/volunteers/:
+    get:
+      operationId: v1_volunteers_list
+      description: ViewSet for managing individual volunteers (Edit/Delete).
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Events
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedEventVolunteerList'
+          description: ''
+  /api/v1/volunteers/{id}/:
+    get:
+      operationId: v1_volunteers_retrieve
+      description: ViewSet for managing individual volunteers (Edit/Delete).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event Volunteer.
+        required: true
+      tags:
+      - Events
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventVolunteer'
+          description: ''
+    patch:
+      operationId: v1_volunteers_partial_update
+      description: ViewSet for managing individual volunteers (Edit/Delete).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event Volunteer.
+        required: true
+      tags:
+      - Events
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedEventVolunteerRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedEventVolunteerRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedEventVolunteerRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EventVolunteer'
+          description: ''
+    delete:
+      operationId: v1_volunteers_destroy
+      description: ViewSet for managing individual volunteers (Edit/Delete).
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Event Volunteer.
+        required: true
+      tags:
+      - Events
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+components:
+  schemas:
+    Announcement:
+      type: object
+      description: |-
+        Serializer for announcements mapping JSONFields to frontend arrays and
+        formatting relative/ISO time.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        summary:
+          type: string
+        category:
+          type: string
+          format: uuid
+          nullable: true
+        category_details:
+          allOf:
+          - $ref: '#/components/schemas/AnnouncementCategory'
+          readOnly: true
+        is_pinned:
+          type: boolean
+          description: Pin to top of the list
+        author:
+          allOf:
+          - $ref: '#/components/schemas/UserMinimal'
+          readOnly: true
+        author_name:
+          type: string
+          maxLength: 255
+        author_role_name:
+          type: string
+          readOnly: true
+        image:
+          type: string
+          format: uri
+          nullable: true
+        tags:
+          type: array
+          items:
+            type: string
+        body:
+          type: string
+          description: Rich text content (HTML)
+        published_date:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - author
+      - author_name
+      - author_role_name
+      - body
+      - category_details
+      - created_at
+      - id
+      - published_date
+      - summary
+      - title
+      - updated_at
+    AnnouncementCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+      required:
+      - id
+      - name
+      - slug
+    AnnouncementCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+      required:
+      - name
+      - slug
+    AnnouncementRequest:
+      type: object
+      description: |-
+        Serializer for announcements mapping JSONFields to frontend arrays and
+        formatting relative/ISO time.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        summary:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          format: uuid
+          nullable: true
+        is_pinned:
+          type: boolean
+          description: Pin to top of the list
+        author_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        image:
+          type: string
+          format: binary
+        tags:
+          type: array
+          items:
+            type: string
+        body:
+          type: string
+          minLength: 1
+          description: Rich text content (HTML)
+      required:
+      - author_name
+      - body
+      - summary
+      - title
+    Booking:
+      type: object
+      description: |-
+        Serializer for booking requests with expanded relational info.
+        Includes requester and club details for admin views.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        id_label:
+          type: string
+          readOnly: true
+        requester:
+          allOf:
+          - $ref: '#/components/schemas/UserMinimal'
+          readOnly: true
+        club:
+          allOf:
+          - $ref: '#/components/schemas/ClubMinimal'
+          readOnly: true
+        venue:
+          type: string
+          format: uuid
+        venue_name:
+          type: string
+          readOnly: true
+        venue_type:
+          type: string
+          readOnly: true
+        status:
+          $ref: '#/components/schemas/BookingStatusEnum'
+        purpose:
+          type: string
+        requested_date_iso:
+          type: string
+          format: date-time
+        time_range:
+          type: string
+          maxLength: 100
+        capacity_label:
+          type: string
+          readOnly: true
+        date_label:
+          type: string
+          readOnly: true
+        event:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - capacity_label
+      - club
+      - created_at
+      - date_label
+      - event
+      - id
+      - id_label
+      - purpose
+      - requested_date_iso
+      - requester
+      - time_range
+      - updated_at
+      - venue
+      - venue_name
+      - venue_type
+    BookingRequest:
+      type: object
+      description: |-
+        Serializer for booking requests with expanded relational info.
+        Includes requester and club details for admin views.
+      properties:
+        venue:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/BookingStatusEnum'
+        purpose:
+          type: string
+          minLength: 1
+        requested_date_iso:
+          type: string
+          format: date-time
+        time_range:
+          type: string
+          minLength: 1
+          maxLength: 100
+      required:
+      - purpose
+      - requested_date_iso
+      - time_range
+      - venue
+    BookingStatusEnum:
+      enum:
+      - pending
+      - approved
+      - cancelled
+      type: string
+      description: |-
+        * `pending` - Pending Approval
+        * `approved` - Approved
+        * `cancelled` - Cancelled
+    Club:
+      type: object
+      description: Full Club detail serializer with president's expanded info.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/ClubStatusEnum'
+        category:
+          type: string
+          format: uuid
+          nullable: true
+        category_details:
+          allOf:
+          - $ref: '#/components/schemas/ClubCategory'
+          readOnly: true
+        location_label:
+          type: string
+          maxLength: 255
+        logo_label:
+          type: string
+          maxLength: 10
+        cover_image:
+          type: string
+          format: uri
+          nullable: true
+        logo:
+          type: string
+          format: uri
+          nullable: true
+        description:
+          type: string
+          description: Rich text content (HTML)
+        president:
+          allOf:
+          - $ref: '#/components/schemas/UserMinimal'
+          readOnly: true
+        advisor_name:
+          type: string
+          maxLength: 255
+        advisor_department:
+          type: string
+          format: uuid
+          nullable: true
+        advisor_phone:
+          type: string
+          maxLength: 20
+        advisor_email:
+          type: string
+          format: email
+          maxLength: 254
+        links:
+          type: object
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - category_details
+      - created_at
+      - description
+      - id
+      - location_label
+      - name
+      - president
+      - updated_at
+    ClubCategory:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+        slug:
+          type: string
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+      required:
+      - id
+      - name
+      - slug
+    ClubCategoryRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+      required:
+      - name
+      - slug
+    ClubMinimal:
+      type: object
+      description: Minimal club info for selection/list cards.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        category:
+          type: string
+          format: uuid
+          nullable: true
+        category_name:
+          type: string
+          readOnly: true
+        logo_label:
+          type: string
+          maxLength: 10
+      required:
+      - category_name
+      - id
+      - name
+    ClubMinimalRequest:
+      type: object
+      description: Minimal club info for selection/list cards.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        category:
+          type: string
+          format: uuid
+          nullable: true
+        logo_label:
+          type: string
+          maxLength: 10
+      required:
+      - name
+    ClubRequest:
+      type: object
+      description: Full Club detail serializer with president's expanded info.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/ClubStatusEnum'
+        category:
+          type: string
+          format: uuid
+          nullable: true
+        location_label:
+          type: string
+          minLength: 1
+          maxLength: 255
+        logo_label:
+          type: string
+          maxLength: 10
+        cover_image:
+          type: string
+          format: binary
+        logo:
+          type: string
+          format: binary
+        description:
+          type: string
+          minLength: 1
+          description: Rich text content (HTML)
+        advisor_name:
+          type: string
+          maxLength: 255
+        advisor_department:
+          type: string
+          format: uuid
+          nullable: true
+        advisor_phone:
+          type: string
+          maxLength: 20
+        advisor_email:
+          type: string
+          format: email
+          maxLength: 254
+        links:
+          type: object
+      required:
+      - description
+      - location_label
+      - name
+    ClubStatusEnum:
+      enum:
+      - active
+      - pending
+      - rejected
+      type: string
+      description: |-
+        * `active` - Active
+        * `pending` - Pending Approval
+        * `rejected` - Rejected
+    CpuStats:
+      type: object
+      properties:
+        cores:
+          type: integer
+        model:
+          type: string
+        speedMHz:
+          type: number
+          format: double
+        loadavg:
+          type: array
+          items:
+            type: number
+            format: double
+      required:
+      - cores
+      - loadavg
+      - model
+      - speedMHz
+    DiskStats:
+      type: object
+      properties:
+        mount:
+          type: string
+        size:
+          type: integer
+        used:
+          type: integer
+        available:
+          type: integer
+        usedPercent:
+          type: number
+          format: double
+      required:
+      - available
+      - mount
+      - size
+      - used
+      - usedPercent
+    Event:
+      type: object
+      description: Comprehensive Event Serializer with expanded relations and schedule
+        formatting.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        title:
+          type: string
+          maxLength: 255
+        summary:
+          type: string
+        status:
+          $ref: '#/components/schemas/EventStatusEnum'
+        is_mega_event:
+          type: boolean
+        organizing_club:
+          allOf:
+          - $ref: '#/components/schemas/ClubMinimal'
+          readOnly: true
+        venue:
+          type: string
+          readOnly: true
+        physical_location_details:
+          type: string
+          description: e.g. Block 45, Second floor, Room 204
+        cover_image:
+          type: string
+          format: uri
+          nullable: true
+        start_date_time:
+          type: string
+          format: date-time
+          nullable: true
+        end_date_time:
+          type: string
+          format: date-time
+          nullable: true
+        date_day:
+          type: string
+          readOnly: true
+        date_month:
+          type: string
+          readOnly: true
+        registration_link:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        description:
+          type: string
+          description: Rich text content (HTML)
+        logistics:
+          type: object
+        attendance:
+          type: object
+        attendees:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserMinimal'
+          readOnly: true
+        attendee_count:
+          type: integer
+          readOnly: true
+        volunteers:
+          type: array
+          items:
+            type: object
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - attendee_count
+      - attendees
+      - created_at
+      - date_day
+      - date_month
+      - description
+      - id
+      - organizing_club
+      - summary
+      - title
+      - updated_at
+      - venue
+    EventRequest:
+      type: object
+      description: Comprehensive Event Serializer with expanded relations and schedule
+        formatting.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        summary:
+          type: string
+          minLength: 1
+        status:
+          $ref: '#/components/schemas/EventStatusEnum'
+        is_mega_event:
+          type: boolean
+        physical_location_details:
+          type: string
+          description: e.g. Block 45, Second floor, Room 204
+        cover_image:
+          type: string
+          format: binary
+        start_date_time:
+          type: string
+          format: date-time
+          nullable: true
+        end_date_time:
+          type: string
+          format: date-time
+          nullable: true
+        registration_link:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+          description: Rich text content (HTML)
+        logistics:
+          type: object
+        attendance:
+          type: object
+        volunteers:
+          type: array
+          items:
+            type: object
+      required:
+      - description
+      - summary
+      - title
+    EventStatusEnum:
+      enum:
+      - upcoming
+      - live-now
+      - archived
+      type: string
+      description: |-
+        * `upcoming` - Upcoming Event
+        * `live-now` - Happening Now
+        * `archived` - Past Event
+    EventVolunteer:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        user:
+          allOf:
+          - $ref: '#/components/schemas/UserMinimal'
+          readOnly: true
+        event:
+          type: string
+          format: uuid
+        is_active:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - event
+      - id
+      - updated_at
+      - user
+    EventVolunteerRequest:
+      type: object
+      properties:
+        event:
+          type: string
+          format: uuid
+        is_active:
+          type: boolean
+      required:
+      - event
+    ForgotPassword:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+      required:
+      - email
+    ForgotPasswordRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    HealthCheckData:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        status:
+          type: string
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/HealthComponent'
+      required:
+      - components
+      - message
+      - status
+      - success
+    HealthCheckResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/HealthCheckData'
+        statusCode:
+          type: integer
+        error:
+          type: string
+          nullable: true
+      required:
+      - data
+      - error
+      - message
+      - statusCode
+      - success
+    HealthComponent:
+      type: object
+      properties:
+        name:
+          type: string
+        status:
+          type: string
+      required:
+      - name
+      - status
+    MemoryStats:
+      type: object
+      properties:
+        total:
+          type: integer
+        free:
+          type: integer
+        used:
+          type: integer
+        usedPercent:
+          type: number
+          format: double
+      required:
+      - free
+      - total
+      - used
+      - usedPercent
+    NetworkInterface:
+      type: object
+      properties:
+        interface:
+          type: string
+        state:
+          type: string
+        speedMbps:
+          type: integer
+        incomming:
+          type: integer
+        outgoing:
+          type: integer
+      required:
+      - incomming
+      - interface
+      - outgoing
+      - speedMbps
+      - state
+    PaginatedAnnouncementList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Announcement'
+    PaginatedBookingList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Booking'
+    PaginatedClubList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Club'
+    PaginatedEventList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Event'
+    PaginatedEventVolunteerList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/EventVolunteer'
+    PaginatedUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/User'
+    PaginatedVenueList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Venue'
+    PatchedAnnouncementRequest:
+      type: object
+      description: |-
+        Serializer for announcements mapping JSONFields to frontend arrays and
+        formatting relative/ISO time.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        summary:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          format: uuid
+          nullable: true
+        is_pinned:
+          type: boolean
+          description: Pin to top of the list
+        author_name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        image:
+          type: string
+          format: binary
+        tags:
+          type: array
+          items:
+            type: string
+        body:
+          type: string
+          minLength: 1
+          description: Rich text content (HTML)
+    PatchedBookingRequest:
+      type: object
+      description: |-
+        Serializer for booking requests with expanded relational info.
+        Includes requester and club details for admin views.
+      properties:
+        venue:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/BookingStatusEnum'
+        purpose:
+          type: string
+          minLength: 1
+        requested_date_iso:
+          type: string
+          format: date-time
+        time_range:
+          type: string
+          minLength: 1
+          maxLength: 100
+    PatchedClubRequest:
+      type: object
+      description: Full Club detail serializer with president's expanded info.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/ClubStatusEnum'
+        category:
+          type: string
+          format: uuid
+          nullable: true
+        location_label:
+          type: string
+          minLength: 1
+          maxLength: 255
+        logo_label:
+          type: string
+          maxLength: 10
+        cover_image:
+          type: string
+          format: binary
+        logo:
+          type: string
+          format: binary
+        description:
+          type: string
+          minLength: 1
+          description: Rich text content (HTML)
+        advisor_name:
+          type: string
+          maxLength: 255
+        advisor_department:
+          type: string
+          format: uuid
+          nullable: true
+        advisor_phone:
+          type: string
+          maxLength: 20
+        advisor_email:
+          type: string
+          format: email
+          maxLength: 254
+        links:
+          type: object
+    PatchedEventRequest:
+      type: object
+      description: Comprehensive Event Serializer with expanded relations and schedule
+        formatting.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 255
+        summary:
+          type: string
+          minLength: 1
+        status:
+          $ref: '#/components/schemas/EventStatusEnum'
+        is_mega_event:
+          type: boolean
+        physical_location_details:
+          type: string
+          description: e.g. Block 45, Second floor, Room 204
+        cover_image:
+          type: string
+          format: binary
+        start_date_time:
+          type: string
+          format: date-time
+          nullable: true
+        end_date_time:
+          type: string
+          format: date-time
+          nullable: true
+        registration_link:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        description:
+          type: string
+          minLength: 1
+          description: Rich text content (HTML)
+        logistics:
+          type: object
+        attendance:
+          type: object
+        volunteers:
+          type: array
+          items:
+            type: object
+    PatchedEventVolunteerRequest:
+      type: object
+      properties:
+        event:
+          type: string
+          format: uuid
+        is_active:
+          type: boolean
+    PatchedUserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        student_id:
+          type: string
+          minLength: 1
+          maxLength: 50
+        department:
+          type: string
+          format: uuid
+          nullable: true
+        role:
+          type: string
+          format: uuid
+          nullable: true
+        avatar:
+          type: string
+          format: binary
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+    PatchedVenueRequest:
+      type: object
+      description: Full serializer for Venue data including strict validation for
+        JSONFields.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/VenueStatusEnum'
+        type_label:
+          type: string
+          minLength: 1
+          maxLength: 100
+        capacity_label:
+          type: string
+          minLength: 1
+          maxLength: 100
+        location:
+          type: string
+          minLength: 1
+          maxLength: 255
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        amenities: {}
+        contact: {}
+    ResetPassword:
+      type: object
+      properties:
+        uidb64:
+          type: string
+        token:
+          type: string
+        password:
+          type: string
+          minLength: 8
+      required:
+      - password
+      - token
+      - uidb64
+    ResetPasswordRequest:
+      type: object
+      properties:
+        uidb64:
+          type: string
+          minLength: 1
+        token:
+          type: string
+          minLength: 1
+        password:
+          type: string
+          minLength: 8
+      required:
+      - password
+      - token
+      - uidb64
+    SystemStatsData:
+      type: object
+      properties:
+        timestamp:
+          type: string
+          format: date-time
+        cpu:
+          $ref: '#/components/schemas/CpuStats'
+        memory:
+          $ref: '#/components/schemas/MemoryStats'
+        disk:
+          $ref: '#/components/schemas/DiskStats'
+        network:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkInterface'
+        lastUpdate:
+          type: string
+          format: date-time
+        uptime:
+          type: number
+          format: double
+        status:
+          type: string
+      required:
+      - cpu
+      - disk
+      - lastUpdate
+      - memory
+      - network
+      - status
+      - timestamp
+      - uptime
+    SystemStatsResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/SystemStatsData'
+        statusCode:
+          type: integer
+        error:
+          type: string
+          nullable: true
+      required:
+      - data
+      - error
+      - message
+      - statusCode
+      - success
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        username:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - password
+      - username
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    TokenVerifyRequest:
+      type: object
+      properties:
+        token:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - token
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        student_id:
+          type: string
+          maxLength: 50
+        department:
+          type: string
+          format: uuid
+          nullable: true
+        role:
+          type: string
+          format: uuid
+          nullable: true
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        initials:
+          type: string
+          readOnly: true
+        username:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+      required:
+      - email
+      - id
+      - initials
+      - name
+      - student_id
+    UserMinimal:
+      type: object
+      description: Simplified user data for embedding in lists or other models.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        initials:
+          type: string
+          readOnly: true
+      required:
+      - id
+      - initials
+      - name
+    UserMinimalRequest:
+      type: object
+      description: Simplified user data for embedding in lists or other models.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        avatar:
+          type: string
+          format: binary
+      required:
+      - name
+    UserRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        student_id:
+          type: string
+          minLength: 1
+          maxLength: 50
+        department:
+          type: string
+          format: uuid
+          nullable: true
+        role:
+          type: string
+          format: uuid
+          nullable: true
+        avatar:
+          type: string
+          format: binary
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        username:
+          type: string
+          minLength: 1
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          pattern: ^[\w.@+-]+$
+          maxLength: 150
+      required:
+      - email
+      - name
+      - student_id
+    Venue:
+      type: object
+      description: Full serializer for Venue data including strict validation for
+        JSONFields.
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/VenueStatusEnum'
+        type_label:
+          type: string
+          maxLength: 100
+        capacity_label:
+          type: string
+          maxLength: 100
+        location:
+          type: string
+          maxLength: 255
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        amenities: {}
+        contact: {}
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - capacity_label
+      - created_at
+      - id
+      - location
+      - name
+      - type_label
+      - updated_at
+    VenueRequest:
+      type: object
+      description: Full serializer for Venue data including strict validation for
+        JSONFields.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/VenueStatusEnum'
+        type_label:
+          type: string
+          minLength: 1
+          maxLength: 100
+        capacity_label:
+          type: string
+          minLength: 1
+          maxLength: 100
+        location:
+          type: string
+          minLength: 1
+          maxLength: 255
+        image_url:
+          type: string
+          format: uri
+          nullable: true
+          maxLength: 200
+        amenities: {}
+        contact: {}
+      required:
+      - capacity_label
+      - location
+      - name
+      - type_label
+    VenueStatusEnum:
+      enum:
+      - active
+      - maintenance
+      - inactive
+      type: string
+      description: |-
+        * `active` - Active
+        * `maintenance` - Maintenance
+        * `inactive` - Inactive
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+- name: Authentication
+  description: User login, registration and password management endpoints.

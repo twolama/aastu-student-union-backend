@@ -1,6 +1,8 @@
-from rest_framework import viewsets, permissions
+from rest_framework import viewsets, permissions, serializers
 from .models import Venue
-from .serializers import VenueSerializer
+from .serializers import (
+    VenueSerializer, VenueListSerializer, VenueDetailSerializer
+)
 
 class VenueViewSet(viewsets.ModelViewSet):
     """
@@ -9,6 +11,13 @@ class VenueViewSet(viewsets.ModelViewSet):
     queryset = Venue.objects.filter(is_active=True)
     serializer_class = VenueSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_serializer_class(self) -> type[serializers.BaseSerializer]:
+        if self.action == 'list':
+            return VenueListSerializer
+        if self.action == 'retrieve':
+            return VenueDetailSerializer
+        return VenueSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()

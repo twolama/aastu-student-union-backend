@@ -8,6 +8,19 @@ class AASTUAutoSchema(AutoSchema):
     """
 
     def _map_serializer_field(self, field, direction, bypass_extensions=False):
+        # 0. Custom mapping for JSON and list fields
+        json_fields = {
+            'attendance': {'type': 'object'},
+            'logistics': {'type': 'object'},
+            'links': {'type': 'object'},
+            'volunteers': {'type': 'array', 'items': {'type': 'object'}},
+            'tags': {'type': 'array', 'items': {'type': 'string'}},
+            'procedure_steps': {'type': 'array', 'items': {'type': 'string'}},
+        }
+        
+        if field.field_name in json_fields:
+            return json_fields[field.field_name]
+
         # 1. Standard instance check for file/image fields
         is_file = isinstance(field, (serializers.ImageField, serializers.FileField))
 

@@ -1,19 +1,31 @@
 from rest_framework import serializers
 from .models import Venue
 
-class VenueSerializer(serializers.ModelSerializer):
+class VenueListSerializer(serializers.ModelSerializer):
     """
-    Full serializer for Venue data including strict validation for JSONFields.
+    Lightweight serializer for listing venues.
+    Excludes full amenities and contact details.
     """
     class Meta:
         model = Venue
         fields = (
             'id', 'name', 'status', 'type_label', 'capacity_label',
-            'location', 'image_url', 'amenities', 'contact',
-            'created_at', 'updated_at'
+            'location', 'image_url', 'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'created_at', 'updated_at')
 
+class VenueDetailSerializer(VenueListSerializer):
+    """
+    Detailed serializer for single venue view.
+    Includes amenities and contact info.
+    """
+    class Meta(VenueListSerializer.Meta):
+        fields = VenueListSerializer.Meta.fields + ('amenities', 'contact')
+
+class VenueSerializer(VenueDetailSerializer):
+    """
+    Alias for creation and validation.
+    """
     def validate_amenities(self, value):
         """
         Ensure amenities is a list of strings as expected by the frontend.

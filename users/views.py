@@ -1,4 +1,4 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework_simplejwt.views import TokenObtainPairView
@@ -12,7 +12,9 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
-from .serializers import UserSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
+from .serializers import (
+    UserSerializer, UserDetailSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
+)
 
 User = get_user_model()
 
@@ -50,7 +52,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     "username": user.username,
                     "name": user.name,
                     "studentId": user.student_id,
-                    "role": user.role,
+                    "role": user.role.slug if user.role else None,
                     "email": user.email,
                     "registrationDate": user.date_joined.isoformat(),
                     "status": "Active" if user.is_active else "Inactive",
@@ -167,6 +169,11 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.filter(is_active=True)
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
+
+    def get_serializer_class(self): # type: ignore
+        if self.action == 'retrieve' or (self.action == 'me'):
+            return UserDetailSerializer
+        return UserSerializer
 
     def perform_create(self, serializer):
         user = serializer.save()

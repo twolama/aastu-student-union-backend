@@ -9,7 +9,7 @@ from announcements.views import AnnouncementViewSet
 from core.views import SystemStatsView, HealthCheckView
 from bookings.views import BookingViewSet
 from clubs.views import ClubViewSet
-from events.views import EventViewSet
+from events.views import EventViewSet, EventVolunteerViewSet
 from users.views import UserViewSet
 from venues.views import VenueViewSet
 
@@ -18,6 +18,7 @@ router.register(r'announcements', AnnouncementViewSet)
 router.register(r'bookings', BookingViewSet)
 router.register(r'clubs', ClubViewSet)
 router.register(r'events', EventViewSet)
+router.register(r'volunteers', EventVolunteerViewSet, basename='volunteer')
 router.register(r'users', UserViewSet)
 router.register(r'venues', VenueViewSet)
 

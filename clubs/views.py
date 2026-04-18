@@ -1,16 +1,23 @@
-from rest_framework import viewsets, permissions, status
+from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Club
-from .serializers import ClubSerializer
+from .serializers import ClubSerializer, ClubListSerializer, ClubDetailSerializer
 
 class ClubViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows clubs to be viewed or edited.
     """
-    queryset = Club.objects.filter(is_active=True).select_related('president')
+    queryset = Club.objects.filter(is_active=True).select_related('president', 'category')
     serializer_class = ClubSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+
+    def get_serializer_class(self): # type: ignore
+        if self.action == 'list':
+            return ClubListSerializer
+        if self.action == 'retrieve':
+            return ClubDetailSerializer
+        return ClubSerializer
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -19,7 +26,7 @@ class ClubViewSet(viewsets.ModelViewSet):
         if status_param:
             queryset = queryset.filter(status=status_param)
         if category:
-            queryset = queryset.filter(category_label=category)
+            queryset = queryset.filter(category__slug=category)
         return queryset
 
     @action(detail=True, methods=['get'], url_path='upcoming-events')

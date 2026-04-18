@@ -47,3 +47,29 @@ class SoftDeleteModel(BaseModel):
         self.deleted_at = None
         self.save()
 
+class College(SoftDeleteModel):
+    """
+    Representation of AASTU Colleges (e.g., COEC, CONAS).
+    """
+    name = models.CharField(max_length=255, unique=True)
+    abbreviation = models.CharField(max_length=20, unique=True) # e.g., COEC
+    description = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"{self.name} ({self.abbreviation})"
+
+class Department(SoftDeleteModel):
+    """
+    Academic departments under a college.
+    """
+    name = models.CharField(max_length=255, unique=True)
+    slug = models.SlugField(max_length=255, unique=True)
+    college = models.ForeignKey(College, on_delete=models.CASCADE, related_name='departments')
+
+    class Meta(SoftDeleteModel.Meta):
+        verbose_name = 'Department'
+        verbose_name_plural = 'Departments'
+
+    def __str__(self):
+        return self.name
+
