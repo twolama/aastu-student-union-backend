@@ -6,6 +6,12 @@ class CollegeMinimalSerializer(serializers.ModelSerializer):
         model = College
         fields = ('id', 'name', 'abbreviation')
 
+
+class CollegeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = College
+        fields = ('id', 'name', 'abbreviation', 'description')
+
 class DepartmentSerializer(serializers.ModelSerializer):
     college_details = CollegeMinimalSerializer(source='college', read_only=True)
     

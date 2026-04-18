@@ -1104,6 +1104,358 @@ paths:
               schema:
                 $ref: '#/components/schemas/Club'
           description: ''
+  /api/v1/colleges/:
+    get:
+      operationId: v1_colleges_list
+      description: |-
+        API endpoint for colleges.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Core
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedCollegeList'
+          description: ''
+    post:
+      operationId: v1_colleges_create
+      description: |-
+        API endpoint for colleges.
+        Read access is public; write actions are restricted to admins.
+      tags:
+      - Core
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollegeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CollegeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CollegeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/College'
+          description: ''
+  /api/v1/colleges/{id}/:
+    get:
+      operationId: v1_colleges_retrieve
+      description: |-
+        API endpoint for colleges.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this college.
+        required: true
+      tags:
+      - Core
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/College'
+          description: ''
+    put:
+      operationId: v1_colleges_update
+      description: |-
+        API endpoint for colleges.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this college.
+        required: true
+      tags:
+      - Core
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CollegeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CollegeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CollegeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/College'
+          description: ''
+    patch:
+      operationId: v1_colleges_partial_update
+      description: |-
+        API endpoint for colleges.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this college.
+        required: true
+      tags:
+      - Core
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedCollegeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedCollegeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedCollegeRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/College'
+          description: ''
+    delete:
+      operationId: v1_colleges_destroy
+      description: |-
+        API endpoint for colleges.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this college.
+        required: true
+      tags:
+      - Core
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/departments/:
+    get:
+      operationId: v1_departments_list
+      description: |-
+        API endpoint for departments.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Core
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedDepartmentList'
+          description: ''
+    post:
+      operationId: v1_departments_create
+      description: |-
+        API endpoint for departments.
+        Read access is public; write actions are restricted to admins.
+      tags:
+      - Core
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DepartmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DepartmentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+  /api/v1/departments/{id}/:
+    get:
+      operationId: v1_departments_retrieve
+      description: |-
+        API endpoint for departments.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Department.
+        required: true
+      tags:
+      - Core
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+    put:
+      operationId: v1_departments_update
+      description: |-
+        API endpoint for departments.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Department.
+        required: true
+      tags:
+      - Core
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DepartmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/DepartmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/DepartmentRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+    patch:
+      operationId: v1_departments_partial_update
+      description: |-
+        API endpoint for departments.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Department.
+        required: true
+      tags:
+      - Core
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartmentRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartmentRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedDepartmentRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Department'
+          description: ''
+    delete:
+      operationId: v1_departments_destroy
+      description: |-
+        API endpoint for departments.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Department.
+        required: true
+      tags:
+      - Core
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/events/:
     get:
       operationId: v1_events_list
@@ -1328,6 +1680,182 @@ paths:
               schema:
                 $ref: '#/components/schemas/Event'
           description: ''
+  /api/v1/roles/:
+    get:
+      operationId: v1_roles_list
+      description: |-
+        API endpoint for user roles.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - name: limit
+        required: false
+        in: query
+        description: Number of results to return per page.
+        schema:
+          type: integer
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedRoleList'
+          description: ''
+    post:
+      operationId: v1_roles_create
+      description: |-
+        API endpoint for user roles.
+        Read access is public; write actions are restricted to admins.
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+          description: ''
+  /api/v1/roles/{id}/:
+    get:
+      operationId: v1_roles_retrieve
+      description: |-
+        API endpoint for user roles.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Role.
+        required: true
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+          description: ''
+    put:
+      operationId: v1_roles_update
+      description: |-
+        API endpoint for user roles.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Role.
+        required: true
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/RoleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/RoleRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+          description: ''
+    patch:
+      operationId: v1_roles_partial_update
+      description: |-
+        API endpoint for user roles.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Role.
+        required: true
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedRoleRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedRoleRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedRoleRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
+          description: ''
+    delete:
+      operationId: v1_roles_destroy
+      description: |-
+        API endpoint for user roles.
+        Read access is public; write actions are restricted to admins.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: string
+          format: uuid
+        description: A UUID string identifying this Role.
+        required: true
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
   /api/v1/system/health/:
     get:
       operationId: v1_system_health_retrieve
@@ -3073,6 +3601,25 @@ components:
       - description
       - location_label
       - name
+    College:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        abbreviation:
+          type: string
+          maxLength: 20
+        description:
+          type: string
+      required:
+      - abbreviation
+      - id
+      - name
     CollegeMinimal:
       type: object
       properties:
@@ -3089,6 +3636,36 @@ components:
       required:
       - abbreviation
       - id
+      - name
+    CollegeMinimalRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        abbreviation:
+          type: string
+          minLength: 1
+          maxLength: 20
+      required:
+      - abbreviation
+      - name
+    CollegeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        abbreviation:
+          type: string
+          minLength: 1
+          maxLength: 20
+        description:
+          type: string
+      required:
+      - abbreviation
       - name
     CpuStats:
       type: object
@@ -3135,6 +3712,25 @@ components:
       - college
       - college_details
       - id
+      - name
+      - slug
+    DepartmentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        college:
+          type: string
+          format: uuid
+      required:
+      - college
       - name
       - slug
     DiskStats:
@@ -3779,6 +4375,52 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ClubList'
+    PaginatedCollegeList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/College'
+    PaginatedDepartmentList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Department'
     PaginatedEventListList:
       type: object
       required:
@@ -3825,6 +4467,29 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/EventVolunteer'
+    PaginatedRoleList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/Role'
     PaginatedUserList:
       type: object
       required:
@@ -4061,6 +4726,34 @@ components:
           nullable: true
         links:
           type: object
+    PatchedCollegeRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        abbreviation:
+          type: string
+          minLength: 1
+          maxLength: 20
+        description:
+          type: string
+    PatchedDepartmentRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        college:
+          type: string
+          format: uuid
     PatchedEventRequest:
       type: object
       description: Serializer for creation/update and internal logic.
@@ -4139,6 +4832,23 @@ components:
           maxLength: 100
         is_active:
           type: boolean
+    PatchedRoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+        is_staff_role:
+          type: boolean
+          description: Should users with this role have admin panel access?
     PatchedUserRequest:
       type: object
       properties:
@@ -4166,6 +4876,10 @@ components:
           format: email
           minLength: 1
           maxLength: 254
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
         username:
           type: string
           minLength: 1
@@ -4341,6 +5055,26 @@ components:
           description: Should users with this role have admin panel access?
       required:
       - id
+      - name
+      - slug
+    RoleRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 100
+        slug:
+          type: string
+          minLength: 1
+          maxLength: 100
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+        is_staff_role:
+          type: boolean
+          description: Should users with this role have admin panel access?
+      required:
       - name
       - slug
     Status6eaEnum:
@@ -4519,6 +5253,10 @@ components:
           type: string
           format: email
           maxLength: 254
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
         initials:
           type: string
           readOnly: true
@@ -4564,6 +5302,10 @@ components:
           type: string
           format: email
           maxLength: 254
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
         initials:
           type: string
           readOnly: true
@@ -4573,10 +5315,6 @@ components:
             only.
           pattern: ^[\w.@+-]+$
           maxLength: 150
-        phone_number:
-          type: string
-          nullable: true
-          maxLength: 20
         dorm_block:
           type: string
           nullable: true
@@ -4680,6 +5418,10 @@ components:
           format: email
           minLength: 1
           maxLength: 254
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
         username:
           type: string
           minLength: 1

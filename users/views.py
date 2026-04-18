@@ -12,11 +12,27 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
+from .models import Role
 from .serializers import (
-    UserSerializer, UserDetailSerializer, ForgotPasswordSerializer, ResetPasswordSerializer
+    UserSerializer, UserDetailSerializer, ForgotPasswordSerializer, ResetPasswordSerializer,
+    RoleSerializer,
 )
 
 User = get_user_model()
+
+
+class RoleViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for user roles.
+    Read access is public; write actions are restricted to admins.
+    """
+    queryset = Role.objects.filter(is_active=True).order_by('name')
+    serializer_class = RoleSerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
 class CustomTokenObtainPairView(TokenObtainPairView):
     """

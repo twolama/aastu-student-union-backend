@@ -30,11 +30,32 @@ class UserMinimalSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'name', 'student_id', 'department', 'role', 'avatar', 'email', 'initials', 'username')
+        fields = (
+            'id',
+            'name',
+            'student_id',
+            'department',
+            'role',
+            'avatar',
+            'email',
+            'phone_number',
+            'initials',
+            'username',
+        )
         read_only_fields = ('id', 'initials')
         extra_kwargs = {
             'username': {'required': False},
         }
+
+    def to_internal_value(self, data):
+        """
+        Backward compatibility for clients sending `phone` instead of `phone_number`.
+        """
+        if hasattr(data, 'copy'):
+            data = data.copy()
+        if 'phone_number' not in data and 'phone' in data:
+            data['phone_number'] = data.get('phone')
+        return super().to_internal_value(data)
 
     def create(self, validated_data):
         # Default username to student_id or email if not provided

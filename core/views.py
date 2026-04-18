@@ -8,7 +8,38 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from drf_spectacular.utils import extend_schema
+from rest_framework import viewsets
+from .models import College, Department
 from .serializers import SystemStatsResponseSerializer, HealthCheckResponseSerializer
+from .serializers import CollegeSerializer, DepartmentSerializer
+
+
+class CollegeViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for colleges.
+    Read access is public; write actions are restricted to admins.
+    """
+    queryset = College.objects.filter(is_active=True).order_by('name')
+    serializer_class = CollegeSerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
+
+
+class DepartmentViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for departments.
+    Read access is public; write actions are restricted to admins.
+    """
+    queryset = Department.objects.filter(is_active=True).select_related('college').order_by('name')
+    serializer_class = DepartmentSerializer
+
+    def get_permissions(self):
+        if self.request.method in permissions.SAFE_METHODS:
+            return [permissions.AllowAny()]
+        return [permissions.IsAdminUser()]
 
 class SystemStatsView(APIView):
     """
