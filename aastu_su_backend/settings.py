@@ -108,6 +108,11 @@ DATABASES = {
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
 
+# Authentication Backends
+AUTHENTICATION_BACKENDS = [
+    'users.backends.MultiIdentifierBackend',
+    'django.contrib.auth.backends.ModelBackend',
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators

@@ -168,6 +168,29 @@ class UserViewSet(viewsets.ModelViewSet):
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 
+    def perform_create(self, serializer):
+        user = serializer.save()
+        
+        # Logic to send invitation email
+        try:
+            token = default_token_generator.make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            setup_link = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
+            
+            subject = "Welcome to AASTU Student Union Portal"
+            message = f"Hello {user.name},\n\nAn account has been created for you on the AASTU Student Union Portal. Please click the link below to set your password and access your account:\n\n{setup_link}\n\nWelcome aboard!"
+            
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            # Log error but don't fail user creation
+            print(f"Failed to send invitation email: {e}")
+
     def get_queryset(self):
         # Allow filtering by role or department if needed
         queryset = super().get_queryset()
