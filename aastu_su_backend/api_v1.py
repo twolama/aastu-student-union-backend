@@ -4,7 +4,14 @@ from rest_framework_simplejwt.views import (
     TokenRefreshView,
     TokenVerifyView,
 )
-from users.views import UserViewSet, RoleViewSet, ForgotPasswordView, ResetPasswordView, CustomTokenObtainPairView
+from users.views import (
+    UserViewSet,
+    RoleViewSet,
+    ForgotPasswordView,
+    ResetPasswordView,
+    ChangePasswordView,
+    CustomTokenObtainPairView,
+)
 from announcements.views import AnnouncementViewSet, AnnouncementCategoryViewSet
 from core.views import (
     SystemStatsView,
@@ -17,7 +24,6 @@ from core.views import (
 from bookings.views import BookingViewSet
 from clubs.views import ClubViewSet, ClubCategoryViewSet
 from events.views import EventViewSet, EventVolunteerViewSet
-from users.views import UserViewSet
 from venues.views import VenueViewSet, VenueImageViewSet, VenueCategoryViewSet
 
 router = DefaultRouter()
@@ -43,6 +49,7 @@ urlpatterns = [
     path('auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('auth/forgot-password/', ForgotPasswordView.as_view(), name='forgot_password'),
     path('auth/reset-password/', ResetPasswordView.as_view(), name='reset_password'),
+    path('auth/change-password/', ChangePasswordView.as_view(), name='change_password'),
     
     # System Health
     path('system/stats/', SystemStatsView.as_view(), name='system_stats'),

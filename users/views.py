@@ -1,6 +1,7 @@
 from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
 from datetime import datetime, timedelta
@@ -12,9 +13,11 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
+from drf_spectacular.utils import extend_schema
 from .models import Role
 from .serializers import (
-    UserSerializer, UserDetailSerializer, ForgotPasswordSerializer, ResetPasswordSerializer,
+    UserSerializer, UserDetailSerializer, SelfProfileSerializer,
+    ForgotPasswordSerializer, ResetPasswordSerializer, ChangePasswordSerializer,
     RoleSerializer,
 )
 
@@ -178,6 +181,27 @@ class ResetPasswordView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+
+class ChangePasswordView(APIView):
+    """
+    Authenticated endpoint for changing current user's password.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = ChangePasswordSerializer
+
+    @extend_schema(request=ChangePasswordSerializer)
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+
+        request.user.set_password(serializer.validated_data['new_password'])
+        request.user.save(update_fields=['password'])
+
+        return Response(
+            {"message": "Password changed successfully."},
+            status=status.HTTP_200_OK,
+        )
+
 class UserViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
@@ -187,9 +211,22 @@ class UserViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_serializer_class(self): # type: ignore
-        if self.action == 'retrieve' or (self.action == 'me'):
+        if self.action == 'me':
+            return SelfProfileSerializer
+        if self.action == 'retrieve':
             return UserDetailSerializer
         return UserSerializer
+
+    @action(detail=False, methods=['get', 'patch'], url_path='me', permission_classes=[permissions.IsAuthenticated])
+    def me(self, request):
+        if request.method.lower() == 'get':
+            serializer = self.get_serializer(request.user)
+            return Response(serializer.data)
+
+        serializer = self.get_serializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
 
     def perform_create(self, serializer):
         user = serializer.save()

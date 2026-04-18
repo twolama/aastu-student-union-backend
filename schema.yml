@@ -422,6 +422,29 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/auth/change-password/:
+    post:
+      operationId: v1_auth_change_password_create
+      description: Authenticated endpoint for changing current user's password.
+      tags:
+      - Authentication
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          description: No response body
   /api/v1/auth/forgot-password/:
     post:
       operationId: v1_auth_forgot_password_create
@@ -2095,6 +2118,46 @@ paths:
       responses:
         '204':
           description: No response body
+  /api/v1/users/me/:
+    get:
+      operationId: v1_users_me_retrieve
+      description: API endpoint that allows users to be viewed or edited.
+      tags:
+      - Users
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelfProfile'
+          description: ''
+    patch:
+      operationId: v1_users_me_partial_update
+      description: API endpoint that allows users to be viewed or edited.
+      tags:
+      - Users
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedSelfProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSelfProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSelfProfileRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SelfProfile'
+          description: ''
   /api/v1/venue-categories/:
     get:
       operationId: v1_venue_categories_list
@@ -3454,6 +3517,25 @@ components:
       - start_date
       - title
       - venue
+    ChangePasswordRequest:
+      type: object
+      properties:
+        current_password:
+          type: string
+          writeOnly: true
+          minLength: 1
+        new_password:
+          type: string
+          writeOnly: true
+          minLength: 8
+        confirm_password:
+          type: string
+          writeOnly: true
+          minLength: 8
+      required:
+      - confirm_password
+      - current_password
+      - new_password
     Club:
       type: object
       description: Backward-compatible alias.
@@ -5013,6 +5095,32 @@ components:
         is_staff_role:
           type: boolean
           description: Should users with this role have admin panel access?
+    PatchedSelfProfileRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 255
+        avatar:
+          type: string
+          format: binary
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        dorm_block:
+          type: string
+          nullable: true
+          maxLength: 20
+        dorm_room:
+          type: string
+          nullable: true
+          maxLength: 20
+        department:
+          type: string
+          format: uuid
+          nullable: true
     PatchedUserRequest:
       type: object
       properties:
@@ -5241,6 +5349,78 @@ components:
       required:
       - name
       - slug
+    SelfProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          readOnly: true
+        name:
+          type: string
+          maxLength: 255
+        student_id:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        avatar:
+          type: string
+          format: uri
+          nullable: true
+        phone_number:
+          type: string
+          nullable: true
+          maxLength: 20
+        dorm_block:
+          type: string
+          nullable: true
+          maxLength: 20
+        dorm_room:
+          type: string
+          nullable: true
+          maxLength: 20
+        department:
+          type: string
+          format: uuid
+          nullable: true
+        department_details:
+          allOf:
+          - $ref: '#/components/schemas/Department'
+          readOnly: true
+        college:
+          type: string
+          format: uuid
+          readOnly: true
+        college_details:
+          allOf:
+          - $ref: '#/components/schemas/CollegeMinimal'
+          readOnly: true
+        role:
+          type: string
+          format: uuid
+          readOnly: true
+          nullable: true
+        role_details:
+          allOf:
+          - $ref: '#/components/schemas/Role'
+          readOnly: true
+        initials:
+          type: string
+          readOnly: true
+      required:
+      - college
+      - college_details
+      - department_details
+      - email
+      - id
+      - initials
+      - name
+      - role
+      - role_details
+      - student_id
     Status6eaEnum:
       enum:
       - active
