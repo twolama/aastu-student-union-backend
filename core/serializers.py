@@ -20,6 +20,51 @@ class DepartmentSerializer(serializers.ModelSerializer):
         fields = ('id', 'name', 'slug', 'college', 'college_details')
         read_only_fields = ('college_details',)
 
+
+class AnalyticsStatCardSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    title = serializers.CharField()
+    value = serializers.CharField()
+    trend = serializers.CharField()
+    trend_direction = serializers.ChoiceField(choices=['up', 'down', 'neutral'])
+    icon = serializers.CharField()
+    icon_bg = serializers.CharField()
+
+
+class AnalyticsTrendPointSerializer(serializers.Serializer):
+    label = serializers.CharField()
+    value = serializers.FloatField()
+
+
+class AnalyticsBreakdownItemSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    label = serializers.CharField()
+    value = serializers.IntegerField()
+    color = serializers.CharField()
+
+
+class AnalyticsVenueKpiSerializer(serializers.Serializer):
+    most_popular = serializers.CharField()
+    avg_session_hours = serializers.FloatField()
+
+
+class AnalyticsDashboardDataSerializer(serializers.Serializer):
+    period = serializers.CharField()
+    overview = AnalyticsStatCardSerializer(many=True)
+    registration_trends = AnalyticsTrendPointSerializer(many=True)
+    occupancy_trends = AnalyticsTrendPointSerializer(many=True)
+    club_breakdown = AnalyticsBreakdownItemSerializer(many=True)
+    event_distribution = AnalyticsBreakdownItemSerializer(many=True)
+    venue_kpis = AnalyticsVenueKpiSerializer()
+
+
+class AnalyticsDashboardResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    response_data = AnalyticsDashboardDataSerializer(source='data')
+    statusCode = serializers.IntegerField()
+    error = serializers.CharField(allow_null=True)
+
 class CpuStatsSerializer(serializers.Serializer):
     cores = serializers.IntegerField()
     model = serializers.CharField()

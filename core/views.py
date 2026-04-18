@@ -1,17 +1,30 @@
 import psutil
 import platform
 import time
+import csv
+import calendar
+from datetime import datetime
+from collections import defaultdict
 from django.db import connections
 from django.db.utils import OperationalError
 from django.utils import timezone
+from django.http import HttpResponse
+from django.db.models import Count
+from drf_spectacular.types import OpenApiTypes
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from drf_spectacular.utils import extend_schema
+from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets
 from .models import College, Department
 from .serializers import SystemStatsResponseSerializer, HealthCheckResponseSerializer
 from .serializers import CollegeSerializer, DepartmentSerializer
+from .serializers import AnalyticsDashboardResponseSerializer
+from users.models import User
+from clubs.models import Club
+from events.models import Event
+from bookings.models import Booking
+from venues.models import Venue
 
 
 class CollegeViewSet(viewsets.ModelViewSet):
@@ -40,6 +53,297 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         if self.request.method in permissions.SAFE_METHODS:
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
+
+
+class AnalyticsDashboardView(APIView):
+    """
+    Aggregated statistics for the frontend Statistics and Reports dashboard.
+    """
+    permission_classes = [permissions.IsAdminUser]
+    PERIOD_CHOICES = {'last-8-months', 'academic-year', 'calendar-year'}
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(
+                name='period',
+                type=str,
+                location=OpenApiParameter.QUERY,
+                description='Reporting period: last-8-months, academic-year, calendar-year',
+            )
+        ],
+        responses={200: AnalyticsDashboardResponseSerializer},
+    )
+    def get(self, request):
+        period = request.query_params.get('period', 'last-8-months')
+        if period not in self.PERIOD_CHOICES:
+            period = 'last-8-months'
+
+        now = timezone.now()
+        labels = self._period_labels(period, now)
+
+        registration_trends = self._registration_trends(period, labels, now)
+        occupancy_trends = self._occupancy_trends(period, labels, now)
+        club_breakdown = self._club_breakdown()
+        event_distribution = self._event_distribution()
+        venue_kpis = self._venue_kpis()
+        overview = self._overview_cards(period, now)
+
+        return Response({
+            'success': True,
+            'message': 'Analytics dashboard data retrieved successfully.',
+            'data': {
+                'period': period,
+                'overview': overview,
+                'registration_trends': registration_trends,
+                'occupancy_trends': occupancy_trends,
+                'club_breakdown': club_breakdown,
+                'event_distribution': event_distribution,
+                'venue_kpis': venue_kpis,
+            },
+            'statusCode': 200,
+            'error': None,
+        }, status=status.HTTP_200_OK)
+
+    def _period_labels(self, period, now):
+        if period == 'last-8-months':
+            labels = []
+            year = now.year
+            month = now.month
+            for offset in range(7, -1, -1):
+                mm = month - offset
+                yy = year
+                while mm <= 0:
+                    mm += 12
+                    yy -= 1
+                labels.append({'label': datetime(yy, mm, 1).strftime('%b'), 'year': yy, 'month': mm})
+            return labels
+
+        if period == 'academic-year':
+            start_year = now.year if now.month >= 7 else now.year - 1
+            return [
+                {'label': 'Q1', 'months': [(start_year, 7), (start_year, 8), (start_year, 9)]},
+                {'label': 'Q2', 'months': [(start_year, 10), (start_year, 11), (start_year, 12)]},
+                {'label': 'Q3', 'months': [(start_year + 1, 1), (start_year + 1, 2), (start_year + 1, 3)]},
+                {'label': 'Q4', 'months': [(start_year + 1, 4), (start_year + 1, 5), (start_year + 1, 6)]},
+            ]
+
+        year = now.year
+        return [
+            {'label': 'H1', 'months': [(year, m) for m in range(1, 7)]},
+            {'label': 'H2', 'months': [(year, m) for m in range(7, 13)]},
+        ]
+
+    def _registration_trends(self, period, labels, now):
+        users_qs = User.objects.filter(is_active=True)
+        points = []
+
+        if period == 'last-8-months':
+            grouped = {
+                (item['year'], item['month']): 0
+                for item in labels
+            }
+            for row in users_qs.values('created_at').iterator():
+                dt = row['created_at']
+                key = (dt.year, dt.month)
+                if key in grouped:
+                    grouped[key] += 1
+            for item in labels:
+                points.append({'label': item['label'], 'value': grouped[(item['year'], item['month'])]})
+            return points
+
+        for block in labels:
+            total = 0
+            for yy, mm in block['months']:
+                month_total = users_qs.filter(created_at__year=yy, created_at__month=mm).count()
+                total += month_total
+            points.append({'label': block['label'], 'value': total})
+        return points
+
+    def _occupancy_trends(self, period, labels, now):
+        bookings_qs = Booking.objects.filter(is_active=True).exclude(status='cancelled')
+        active_venues = max(Venue.objects.filter(is_active=True).count(), 1)
+
+        def month_capacity(yy, mm):
+            days = calendar.monthrange(yy, mm)[1]
+            # Frontend slots run 08:00-19:00 (12 hourly slots)
+            return active_venues * days * 12
+
+        def month_booked_slots(yy, mm):
+            month_bookings = bookings_qs.filter(start_date__year=yy, start_date__month=mm)
+            slots = 0
+            for booking in month_bookings.only('selected_slots'):
+                slots += len(booking.selected_slots or [])
+            return slots
+
+        points = []
+
+        if period == 'last-8-months':
+            for item in labels:
+                cap = month_capacity(item['year'], item['month'])
+                used = month_booked_slots(item['year'], item['month'])
+                value = round((used / cap) * 100, 2) if cap else 0
+                points.append({'label': item['label'], 'value': value})
+            return points
+
+        for block in labels:
+            cap_sum = 0
+            used_sum = 0
+            for yy, mm in block['months']:
+                cap_sum += month_capacity(yy, mm)
+                used_sum += month_booked_slots(yy, mm)
+            value = round((used_sum / cap_sum) * 100, 2) if cap_sum else 0
+            points.append({'label': block['label'], 'value': value})
+        return points
+
+    def _club_breakdown(self):
+        palette = ['#c49a22', '#1f2a44', '#7d8ca8', '#d4b45c', '#4b5563']
+        rows = (
+            Club.objects.filter(is_active=True)
+            .values('category__slug', 'category__name')
+            .annotate(value=Count('id'))
+            .order_by('-value')
+        )
+
+        items = []
+        for idx, row in enumerate(rows):
+            slug = row['category__slug'] or f'uncategorized-{idx}'
+            label = row['category__name'] or 'Uncategorized'
+            items.append({
+                'id': slug,
+                'label': label,
+                'value': row['value'],
+                'color': palette[idx % len(palette)],
+            })
+        return items
+
+    def _event_distribution(self):
+        mega = Event.objects.filter(is_active=True, is_mega_event=True).count()
+        general = Event.objects.filter(is_active=True, is_mega_event=False).count()
+        return [
+            {'id': 'general', 'label': 'General', 'value': general, 'color': '#1f2a44'},
+            {'id': 'mega', 'label': 'Mega', 'value': mega, 'color': '#c49a22'},
+        ]
+
+    def _venue_kpis(self):
+        rows = (
+            Booking.objects.filter(is_active=True)
+            .exclude(status='cancelled')
+            .values('venue__name')
+            .annotate(total=Count('id'))
+            .order_by('-total')
+        )
+        most_popular = rows[0]['venue__name'] if rows else 'N/A'
+
+        bookings = Booking.objects.filter(is_active=True).exclude(status='cancelled').only('selected_slots')
+        total_slots = 0
+        count = 0
+        for booking in bookings:
+            slots = len(booking.selected_slots or [])
+            if slots > 0:
+                total_slots += slots
+                count += 1
+        avg_hours = round(total_slots / count, 1) if count else 0.0
+
+        return {
+            'most_popular': most_popular,
+            'avg_session_hours': avg_hours,
+        }
+
+    def _overview_cards(self, period, now):
+        cards = [
+            {
+                'id': 'overview-students',
+                'title': 'Total Students',
+                'value': str(User.objects.filter(is_active=True).count()),
+                'icon': 'GraduationCap',
+                'icon_bg': '#fdf8ec',
+            },
+            {
+                'id': 'overview-clubs',
+                'title': 'Active Clubs',
+                'value': str(Club.objects.filter(is_active=True, status='active').count()),
+                'icon': 'Users2',
+                'icon_bg': '#fdf8ec',
+            },
+            {
+                'id': 'overview-events',
+                'title': 'Monthly Events',
+                'value': str(Event.objects.filter(is_active=True, start_date_time__year=now.year, start_date_time__month=now.month).count()),
+                'icon': 'CalendarDays',
+                'icon_bg': '#fdf8ec',
+            },
+            {
+                'id': 'overview-bookings',
+                'title': 'Total Venue Bookings',
+                'value': str(Booking.objects.filter(is_active=True).exclude(status='cancelled').count()),
+                'icon': 'Building2',
+                'icon_bg': '#fdf8ec',
+            },
+        ]
+
+        # Simple trend indicator against previous month where practical.
+        current_month_users = User.objects.filter(is_active=True, created_at__year=now.year, created_at__month=now.month).count()
+        prev_month = now.month - 1 if now.month > 1 else 12
+        prev_year = now.year if now.month > 1 else now.year - 1
+        prev_month_users = User.objects.filter(is_active=True, created_at__year=prev_year, created_at__month=prev_month).count()
+
+        if prev_month_users > 0:
+            delta = round(((current_month_users - prev_month_users) / prev_month_users) * 100, 1)
+        else:
+            delta = 0.0
+
+        trend_direction = 'up' if delta > 0 else ('down' if delta < 0 else 'neutral')
+        trend_text = f"{delta:+.1f}% from last month"
+
+        for card in cards:
+            card['trend'] = trend_text
+            card['trend_direction'] = trend_direction
+
+        return cards
+
+
+class AnalyticsReportExportView(APIView):
+    """
+    Export analytics report as CSV for the selected period.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    @extend_schema(
+        parameters=[
+            OpenApiParameter(name='period', type=str, location=OpenApiParameter.QUERY),
+            OpenApiParameter(name='format', type=str, location=OpenApiParameter.QUERY),
+        ],
+        responses={200: OpenApiTypes.BINARY},
+    )
+    def get(self, request):
+        period = request.query_params.get('period', 'last-8-months')
+        export_format = request.query_params.get('format', 'csv')
+
+        if export_format.lower() != 'csv':
+            return Response(
+                {'error': 'Only CSV export is currently supported.'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        now = timezone.now()
+        stats_view = AnalyticsDashboardView()
+        labels = stats_view._period_labels(period, now)
+        registration = stats_view._registration_trends(period, labels, now)
+        occupancy = stats_view._occupancy_trends(period, labels, now)
+
+        response = HttpResponse(content_type='text/csv')
+        filename = f"analytics-{period}-{now.strftime('%Y%m%d-%H%M%S')}.csv"
+        response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+        writer = csv.writer(response)
+        writer.writerow(['Section', 'Label', 'Value'])
+
+        for item in registration:
+            writer.writerow(['registration_trends', item['label'], item['value']])
+        for item in occupancy:
+            writer.writerow(['occupancy_trends', item['label'], item['value']])
+
+        return response
 
 class SystemStatsView(APIView):
     """

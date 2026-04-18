@@ -6,7 +6,14 @@ from rest_framework_simplejwt.views import (
 )
 from users.views import UserViewSet, RoleViewSet, ForgotPasswordView, ResetPasswordView, CustomTokenObtainPairView
 from announcements.views import AnnouncementViewSet, AnnouncementCategoryViewSet
-from core.views import SystemStatsView, HealthCheckView, CollegeViewSet, DepartmentViewSet
+from core.views import (
+    SystemStatsView,
+    HealthCheckView,
+    CollegeViewSet,
+    DepartmentViewSet,
+    AnalyticsDashboardView,
+    AnalyticsReportExportView,
+)
 from bookings.views import BookingViewSet
 from clubs.views import ClubViewSet, ClubCategoryViewSet
 from events.views import EventViewSet, EventVolunteerViewSet
@@ -40,6 +47,8 @@ urlpatterns = [
     # System Health
     path('system/stats/', SystemStatsView.as_view(), name='system_stats'),
     path('system/health/', HealthCheckView.as_view(), name='health_check'),
+    path('analytics/dashboard/', AnalyticsDashboardView.as_view(), name='analytics_dashboard'),
+    path('analytics/reports/export/', AnalyticsReportExportView.as_view(), name='analytics_reports_export'),
     
     path('', include(router.urls)),
 ]

@@ -4,6 +4,52 @@ info:
   version: 1.0.0
   description: API documentation for the AASTU Student Union website backend.
 paths:
+  /api/v1/analytics/dashboard/:
+    get:
+      operationId: v1_analytics_dashboard_retrieve
+      description: Aggregated statistics for the frontend Statistics and Reports dashboard.
+      parameters:
+      - in: query
+        name: period
+        schema:
+          type: string
+        description: 'Reporting period: last-8-months, academic-year, calendar-year'
+      tags:
+      - Core
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AnalyticsDashboardResponse'
+          description: ''
+  /api/v1/analytics/reports/export/:
+    get:
+      operationId: v1_analytics_reports_export_retrieve
+      description: Export analytics report as CSV for the selected period.
+      parameters:
+      - in: query
+        name: format
+        schema:
+          type: string
+      - in: query
+        name: period
+        schema:
+          type: string
+      tags:
+      - Core
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: string
+                format: binary
+          description: ''
   /api/v1/announcement-categories/:
     get:
       operationId: v1_announcement_categories_list
@@ -2659,6 +2705,124 @@ paths:
           description: No response body
 components:
   schemas:
+    AnalyticsBreakdownItem:
+      type: object
+      properties:
+        id:
+          type: string
+        label:
+          type: string
+        value:
+          type: integer
+        color:
+          type: string
+      required:
+      - color
+      - id
+      - label
+      - value
+    AnalyticsDashboardData:
+      type: object
+      properties:
+        period:
+          type: string
+        overview:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsStatCard'
+        registration_trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsTrendPoint'
+        occupancy_trends:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsTrendPoint'
+        club_breakdown:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsBreakdownItem'
+        event_distribution:
+          type: array
+          items:
+            $ref: '#/components/schemas/AnalyticsBreakdownItem'
+        venue_kpis:
+          $ref: '#/components/schemas/AnalyticsVenueKpi'
+      required:
+      - club_breakdown
+      - event_distribution
+      - occupancy_trends
+      - overview
+      - period
+      - registration_trends
+      - venue_kpis
+    AnalyticsDashboardResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        data:
+          $ref: '#/components/schemas/AnalyticsDashboardData'
+        statusCode:
+          type: integer
+        error:
+          type: string
+          nullable: true
+      required:
+      - data
+      - error
+      - message
+      - statusCode
+      - success
+    AnalyticsStatCard:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        value:
+          type: string
+        trend:
+          type: string
+        trend_direction:
+          $ref: '#/components/schemas/TrendDirectionEnum'
+        icon:
+          type: string
+        icon_bg:
+          type: string
+      required:
+      - icon
+      - icon_bg
+      - id
+      - title
+      - trend
+      - trend_direction
+      - value
+    AnalyticsTrendPoint:
+      type: object
+      properties:
+        label:
+          type: string
+        value:
+          type: number
+          format: double
+      required:
+      - label
+      - value
+    AnalyticsVenueKpi:
+      type: object
+      properties:
+        most_popular:
+          type: string
+        avg_session_hours:
+          type: number
+          format: double
+      required:
+      - avg_session_hours
+      - most_popular
     Announcement:
       type: object
       description: Alias for backward compatibility and internal creation.
@@ -5224,6 +5388,16 @@ components:
           minLength: 1
       required:
       - token
+    TrendDirectionEnum:
+      enum:
+      - up
+      - down
+      - neutral
+      type: string
+      description: |-
+        * `up` - up
+        * `down` - down
+        * `neutral` - neutral
     User:
       type: object
       properties:
