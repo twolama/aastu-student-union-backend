@@ -17,6 +17,7 @@ class AASTUAutoSchema(AutoSchema):
             'tags': {'type': 'array', 'items': {'type': 'string'}},
             'procedure_steps': {'type': 'array', 'items': {'type': 'string'}},
             'amenities': {'type': 'array', 'items': {'type': 'string'}},
+            'selected_slots': {'type': 'array', 'items': {'type': 'string'}},
             'contact': {
                 'type': 'object',
                 'properties': {

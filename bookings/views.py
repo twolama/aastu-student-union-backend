@@ -9,7 +9,7 @@ class BookingViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows venue bookings to be viewed or edited.
     """
-    queryset = Booking.objects.filter(is_active=True).select_related('requester', 'club', 'venue')
+    queryset = Booking.objects.filter(is_active=True).select_related('requester', 'club', 'venue', 'venue__category')
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAuthenticated]
 
@@ -36,10 +36,23 @@ class BookingViewSet(viewsets.ModelViewSet):
         elif role_slug == 'club-president':
              queryset = queryset.filter(Q(requester=user) | Q(club__president=user))
              
-        # Admin can filter by status
+        # Common filters
         status_param = self.request.query_params.get('status')
+        venue = self.request.query_params.get('venue')
+        club = self.request.query_params.get('club')
+        start_date = self.request.query_params.get('start_date')
+        end_date = self.request.query_params.get('end_date')
+
         if status_param:
             queryset = queryset.filter(status=status_param)
+        if venue:
+            queryset = queryset.filter(venue_id=venue)
+        if club:
+            queryset = queryset.filter(club_id=club)
+        if start_date:
+            queryset = queryset.filter(start_date__gte=start_date)
+        if end_date:
+            queryset = queryset.filter(end_date__lte=end_date)
             
         return queryset
 

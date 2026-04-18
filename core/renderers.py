@@ -2,6 +2,8 @@ import re
 from rest_framework.renderers import JSONRenderer
 
 def to_camel_case(snake_str):
+    if not isinstance(snake_str, str):
+        return snake_str
     components = snake_str.split('_')
     return components[0] + ''.join(x.title() for x in components[1:])
 
@@ -9,7 +11,7 @@ def camelize_data(data):
     if isinstance(data, dict):
         new_dict = {}
         for key, value in data.items():
-            new_key = to_camel_case(key)
+            new_key = to_camel_case(key) if isinstance(key, str) else key
             new_dict[new_key] = camelize_data(value)
         return new_dict
     elif isinstance(data, list):
@@ -26,7 +28,7 @@ class CoreJSONRenderer(JSONRenderer):
     Also converts snake_case keys to camelCase.
     """
     def render(self, data, accepted_media_type=None, renderer_context=None):
-        response = renderer_context.get('response')
+        response = renderer_context.get('response') if renderer_context else None
         
         # If it's already a standardized error or success response, we might not want to wrap it again
         # However, for simplicity and strict adherence to Section 4:
