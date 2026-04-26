@@ -53,19 +53,58 @@ class AnnouncementSerializer(AnnouncementDetailSerializer):
         """
         Support tags as JSON-string for multipart/form-data.
         """
+        import ast
         import json
-        if hasattr(data, 'dict'):
-             data = data.copy()
+        if hasattr(data, 'keys'):
+            normalized_data = {key: data.get(key) for key in data.keys()}
+        else:
+            normalized_data = dict(data)
+
+        def coerce_list_field(field_name):
+            list_values = data.getlist(field_name) if hasattr(data, 'getlist') else None
+            raw_value = normalized_data.get(field_name)
+
+            if list_values and len(list_values) > 1:
+                return list(list_values)
+
+            if isinstance(raw_value, (list, tuple)):
+                return list(raw_value)
+
+            if not isinstance(raw_value, str):
+                return raw_value
+
+            value = raw_value.strip()
+            if value == '':
+                return []
+
+            try:
+                parsed = json.loads(value)
+                if isinstance(parsed, (list, tuple)):
+                    return list(parsed)
+                return parsed
+            except (ValueError, TypeError):
+                try:
+                    parsed = ast.literal_eval(value)
+                    if isinstance(parsed, (list, tuple)):
+                        return list(parsed)
+                except (ValueError, SyntaxError):
+                    pass
+
+            # Fallback for unquoted bracket format: [Announcement,AASTU]
+            if value.startswith('[') and value.endswith(']'):
+                inner = value[1:-1].strip()
+                if inner == '':
+                    return []
+
+                parts = [part.strip().strip('"\'') for part in inner.split(',')]
+                return [part for part in parts if part]
+
+            return raw_value
 
         for field in ['tags', 'procedure_steps']:
-            val = data.get(field)
-            if isinstance(val, str):
-                try:
-                    data[field] = json.loads(val)
-                except (ValueError, TypeError):
-                     pass
+            normalized_data[field] = coerce_list_field(field)
 
-        return super().to_internal_value(data)
+        return super().to_internal_value(normalized_data)
 
     def validate_tags(self, value):
         if not isinstance(value, list) or not all(isinstance(x, str) for x in value):

@@ -51,5 +51,11 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        if serializer.validated_data.get('category') is None:
+            raise serializers.ValidationError({
+                'category': ['Category is required. Please select a category before publishing.']
+            })
+
+        user = self.request.user if getattr(self.request.user, 'is_authenticated', False) else None
+        serializer.save(author=user)
 
