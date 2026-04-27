@@ -44,6 +44,11 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        
+        user = self.request.user
+        if not (user.is_authenticated and (user.is_staff or user.is_superuser)):
+            queryset = queryset.filter(is_published=True)
+            
         tag = self.request.query_params.get('tag')
         if tag:
             # Simple JSON contains query for tags list

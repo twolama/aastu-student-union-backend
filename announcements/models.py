@@ -30,6 +30,7 @@ class Announcement(SoftDeleteModel):
         related_name="announcements"
     )
     is_pinned = models.BooleanField(default=False, help_text="Pin to top of the list")
+    is_published = models.BooleanField(default=False, help_text="Whether the announcement is published and visible to the public")
     
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,

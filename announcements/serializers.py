@@ -22,7 +22,7 @@ class AnnouncementListSerializer(serializers.ModelSerializer):
         model = Announcement
         fields = (
             'id', 'title', 'body_excerpt', 'category', 'category_details',
-            'is_pinned', 'author', 'author_name', 
+            'is_pinned', 'is_published', 'author', 'author_name', 
             'author_role_name', 'image', 'tags', 'procedure_steps',
             'published_date', 'created_at', 'updated_at'
         )
@@ -115,3 +115,18 @@ class AnnouncementSerializer(AnnouncementDetailSerializer):
         if not isinstance(value, list):
             raise serializers.ValidationError("Procedure steps must be a list of strings/objects.")
         return value
+
+    def validate(self, attrs):
+        is_published = attrs.get('is_published', getattr(self.instance, 'is_published', False))
+        category = attrs.get('category', getattr(self.instance, 'category', None))
+
+        if category == "":
+            category = None
+            attrs['category'] = None
+
+        if is_published and not category:
+            raise serializers.ValidationError({
+                'category': ['Category is required when publishing an announcement.']
+            })
+
+        return attrs
