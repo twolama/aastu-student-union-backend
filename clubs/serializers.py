@@ -32,13 +32,20 @@ class ClubListSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
     president_name = serializers.CharField(source='president.name', read_only=True)
     advisor_name = serializers.CharField(source='advisor.name', read_only=True)
+    member_count = serializers.SerializerMethodField()
+    
+    @extend_schema_field(serializers.IntegerField())
+    def get_member_count(self, obj):
+        # Placeholder until Membership model is implemented
+        return 0
     
     class Meta:
         model = Club
         fields = (
             'id', 'name', 'status', 'category_name', 'department_name',
             'location_label', 'logo_label', 'logo', 'cover_image', 
-            'president_name', 'advisor_name', 'department'
+            'president_name', 'advisor_name', 'department', 'description',
+            'member_count'
         )
         read_only_fields = ('id', 'category_name', 'department_name', 'president_name', 'advisor_name')
 
