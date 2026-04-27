@@ -7,9 +7,16 @@ class VenueCategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'slug', 'description']
 
 class VenueImageSerializer(serializers.ModelSerializer):
+    venue_id = serializers.PrimaryKeyRelatedField(
+        queryset=Venue.objects.all(),
+        source='venue',
+        write_only=True
+    )
+
     class Meta:
         model = VenueImage
-        fields = ['id', 'image', 'alt_text']
+        fields = ['id', 'venue', 'venue_id', 'image', 'alt_text']
+        read_only_fields = ['venue']
 
 class VenueListSerializer(serializers.ModelSerializer):
     """
@@ -72,40 +79,59 @@ class VenueSerializer(VenueDetailSerializer):
     class Meta(VenueDetailSerializer.Meta):
         fields = VenueDetailSerializer.Meta.fields + ('category_id',)
 
-    def validate_amenities(self, value):
+    def to_internal_value(self, data):
+        """
+        Handle stringified JSON in multipart/form-data.
+        Ensures both snake_case and camelCase variants from frontend are parsed.
+        """
+        import json
+        if hasattr(data, 'dict'):
+            data = data.dict()
+        else:
+            data = data.copy() if hasattr(data, 'copy') else dict(data)
+        
+        # Define mappings for common multipart JSON fields
+        mappings = {
+            'contact': ['contact'],
+            'map_coordinates': ['map_coordinates', 'mapCoordinates'],
+            'amenities': ['amenities']
+        }
+        
+        for field, variants in mappings.items():
+            for variant in variants:
+                if variant in data and isinstance(data[variant], (str, bytes)):
+                    try:
+                        # Parse the JSON string
+                        parsed_val = json.loads(data[variant])
+                        # Always set the snake_case field that DRF expects
+                        data[field] = parsed_val
+                        break
+                    except (json.JSONDecodeError, TypeError):
+                        pass
+        
+        return super().to_internal_value(data)
 
-        """
-        Ensure amenities is a list of strings as expected by the frontend.
-        """
+    def validate_amenities(self, value):
         if not isinstance(value, list):
-            raise serializers.ValidationError("Amenities must be a list of strings.")
-        if not all(isinstance(item, str) for item in value):
-            raise serializers.ValidationError("Every amenity item must be a string.")
+            raise serializers.ValidationError("Amenities must be a list.")
         return value
 
     def validate_map_coordinates(self, value):
-        """
-        Ensure coordinates are a dict with numeric lat/lng values.
-        """
         if not isinstance(value, dict):
-            raise serializers.ValidationError("Map coordinates must be an object/dict.")
-
+            raise serializers.ValidationError("Map coordinates must be an object.")
         required_fields = ['lat', 'lng']
         for field in required_fields:
             if field not in value:
                 raise serializers.ValidationError(f"Missing required coordinate field: {field}")
-            if not isinstance(value[field], (int, float)):
+            try:
+                value[field] = float(value[field])
+            except (TypeError, ValueError):
                 raise serializers.ValidationError(f"Coordinate '{field}' must be numeric.")
-
         return value
 
     def validate_contact(self, value):
-        """
-        Ensure contact info contains required frontend fields.
-        """
         if not isinstance(value, dict):
-            raise serializers.ValidationError("Contact must be an object/dict.")
-        
+            raise serializers.ValidationError("Contact must be an object.")
         required_fields = ['name', 'role', 'phone', 'email']
         for field in required_fields:
             if field not in value:

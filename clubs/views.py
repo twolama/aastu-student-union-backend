@@ -60,10 +60,10 @@ class ClubViewSet(viewsets.ModelViewSet):
         from django.utils import timezone
         
         events = Event.objects.filter(
-            organizer=club, 
-            schedule_date__gte=timezone.now().date(),
+            organizing_club=club, 
+            start_date_time__gte=timezone.now(),
             is_active=True
-        ).order_by('schedule_date')[:5]
+        ).order_by('start_date_time')[:5]
         
         serializer = EventSerializer(events, many=True)
         return Response(serializer.data)

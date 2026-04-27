@@ -68,7 +68,7 @@ class Venue(SoftDeleteModel):
     contact = models.JSONField(default=dict, blank=True) # Kept for backward compatibility
 
     # Google Maps Integration
-    google_maps_url = models.URLField(blank=True)
+    google_maps_url = models.URLField(max_length=500, blank=True)
     map_coordinates = models.JSONField(default=dict, blank=True)
 
     class Meta(SoftDeleteModel.Meta):
