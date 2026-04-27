@@ -53,6 +53,8 @@ class UserMinimalSerializer(serializers.ModelSerializer):
         read_only_fields = ('id', 'initials')
 
 class UserSerializer(serializers.ModelSerializer):
+    department_name = serializers.CharField(source='department.name', read_only=True)
+    
     class Meta:
         model = User
         fields = (
@@ -60,6 +62,7 @@ class UserSerializer(serializers.ModelSerializer):
             'name',
             'student_id',
             'department',
+            'department_name',
             'role',
             'avatar',
             'email',
@@ -67,8 +70,10 @@ class UserSerializer(serializers.ModelSerializer):
             'initials',
             'username',
             'bio',
+            'dorm_block',
+            'dorm_room',
         )
-        read_only_fields = ('id', 'initials')
+        read_only_fields = ('id', 'initials', 'department_name')
         extra_kwargs = {
             'username': {'required': False},
         }

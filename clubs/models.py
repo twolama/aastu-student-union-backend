@@ -36,6 +36,14 @@ class Club(SoftDeleteModel):
         blank=True,
         related_name="clubs"
     )
+    department = models.ForeignKey(
+        Department,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="clubs",
+        help_text="The department this club belongs to (optional)."
+    )
     location_label = models.CharField(max_length=255) # e.g., "Main Campus, Block 24"
     logo_label = models.CharField(max_length=10, blank=True) # Usually first letter or small identifier
     cover_image = models.ImageField(upload_to='clubs/covers/', null=True, blank=True)
