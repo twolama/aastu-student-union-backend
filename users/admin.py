@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
-from .models import User, Role
+from .models import User, Role, PasswordResetOTP
 
 @admin.register(Role)
 class RoleAdmin(admin.ModelAdmin):
@@ -50,4 +50,12 @@ class CustomUserAdmin(UserAdmin):
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related('role', 'department')
+
+
+@admin.register(PasswordResetOTP)
+class PasswordResetOTPAdmin(admin.ModelAdmin):
+    list_display = ('user', 'otp', 'is_used', 'expires_at', 'created_at', 'attempts')
+    search_fields = ('user__email', 'user__username', 'otp')
+    list_filter = ('is_used',)
+    readonly_fields = ('created_at',)
 

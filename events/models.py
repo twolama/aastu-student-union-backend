@@ -79,16 +79,8 @@ class Event(SoftDeleteModel):
 
     def save(self, *args, **kwargs):
         """
-        Auto-calculate status based on timing before saving.
+        Preserve the user-selected status from API/forms.
         """
-        now = timezone.now()
-        if self.start_date_time and now < self.start_date_time:
-            self.status = 'upcoming'
-        elif self.end_date_time and now > self.end_date_time:
-            self.status = 'archived'
-        elif self.start_date_time and self.end_date_time:
-            self.status = 'live-now'
-        
         super().save(*args, **kwargs)
 
 class EventVolunteer(SoftDeleteModel):

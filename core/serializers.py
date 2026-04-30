@@ -48,6 +48,36 @@ class AnalyticsVenueKpiSerializer(serializers.Serializer):
     avg_session_hours = serializers.FloatField()
 
 
+class AnalyticsSimpleStatSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    title = serializers.CharField()
+    value = serializers.CharField()
+    icon = serializers.CharField()
+
+
+class AnalyticsActivitySerializer(serializers.Serializer):
+    id = serializers.CharField()
+    type = serializers.CharField()
+    bold_label = serializers.CharField()
+    description = serializers.CharField()
+    timestamp = serializers.CharField()
+
+
+class AnalyticsEventAttendeeSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    name = serializers.CharField()
+
+
+class AnalyticsUpcomingEventSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    title = serializers.CharField()
+    venue = serializers.CharField()
+    image_url = serializers.CharField()
+    date_label = serializers.CharField()
+    attendee_count = serializers.IntegerField()
+    attendees = AnalyticsEventAttendeeSerializer(many=True)
+
+
 class AnalyticsDashboardDataSerializer(serializers.Serializer):
     period = serializers.CharField()
     overview = AnalyticsStatCardSerializer(many=True)
@@ -56,12 +86,16 @@ class AnalyticsDashboardDataSerializer(serializers.Serializer):
     club_breakdown = AnalyticsBreakdownItemSerializer(many=True)
     event_distribution = AnalyticsBreakdownItemSerializer(many=True)
     venue_kpis = AnalyticsVenueKpiSerializer()
+    venue_stats = AnalyticsSimpleStatSerializer(many=True)
+    club_stats = AnalyticsSimpleStatSerializer(many=True)
+    recent_activity = AnalyticsActivitySerializer(many=True)
+    upcoming_mega_events = AnalyticsUpcomingEventSerializer(many=True)
 
 
 class AnalyticsDashboardResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
     message = serializers.CharField()
-    response_data = AnalyticsDashboardDataSerializer(source='data')
+    data = AnalyticsDashboardDataSerializer()
     statusCode = serializers.IntegerField()
     error = serializers.CharField(allow_null=True)
 

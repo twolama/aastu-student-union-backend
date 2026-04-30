@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import AbstractUser, UserManager, Group
 from core.models import SoftDeleteModel, Department
@@ -95,4 +96,28 @@ class User(SoftDeleteModel, AbstractUser):
     @property
     def role_name(self) -> str:
         return self.role.name if self.role else "No Role"
+
+
+class PasswordResetOTP(models.Model):
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='password_reset_otps',
+    )
+    otp = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    attempts = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        verbose_name = 'Password Reset OTP'
+        verbose_name_plural = 'Password Reset OTPs'
+        indexes = [
+            models.Index(fields=['otp'], name='users_pr_otp_idx'),
+            models.Index(fields=['user', 'is_used', 'expires_at'], name='users_pr_user_idx'),
+        ]
+
+    def __str__(self) -> str:
+        return f"OTP {self.otp} for {self.user.email} (used={self.is_used})"
 

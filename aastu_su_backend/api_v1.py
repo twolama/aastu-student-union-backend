@@ -9,6 +9,8 @@ from users.views import (
     RoleViewSet,
     ForgotPasswordView,
     ResetPasswordView,
+    ResendResetOTPView,
+    VerifyResetOTPView,
     ChangePasswordView,
     CustomTokenObtainPairView,
 )
@@ -48,6 +50,8 @@ urlpatterns = [
     path('auth/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     path('auth/verify/', TokenVerifyView.as_view(), name='token_verify'),
     path('auth/forgot-password/', ForgotPasswordView.as_view(), name='forgot_password'),
+    path('auth/resend-reset-otp/', ResendResetOTPView.as_view(), name='resend_reset_otp'),
+    path('auth/verify-reset-otp/', VerifyResetOTPView.as_view(), name='verify_reset_otp'),
     path('auth/reset-password/', ResetPasswordView.as_view(), name='reset_password'),
     path('auth/change-password/', ChangePasswordView.as_view(), name='change_password'),
     

@@ -14,10 +14,18 @@ class RoleSerializer(serializers.ModelSerializer):
 class ForgotPasswordSerializer(serializers.Serializer):
     email = serializers.EmailField()
 
+class VerifyResetOTPSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    otp = serializers.CharField(min_length=6, max_length=6)
+
 class ResetPasswordSerializer(serializers.Serializer):
-    uidb64 = serializers.CharField()
-    token = serializers.CharField()
+    email = serializers.EmailField()
+    otp = serializers.CharField(min_length=6, max_length=6)
     password = serializers.CharField(min_length=8)
+
+    def validate(self, attrs):
+        validate_password(attrs['password'])
+        return attrs
 
 
 class ChangePasswordSerializer(serializers.Serializer):

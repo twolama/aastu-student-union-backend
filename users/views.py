@@ -4,8 +4,12 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
+import secrets
 from datetime import datetime, timedelta
-from typing import Any, Dict
+from typing import Any, Dict, cast
+from django.db.models.query import QuerySet
+from rest_framework.request import Request
+from urllib.parse import quote_plus
 from django.utils import timezone
 from django.contrib.auth import get_user_model
 from django.contrib.auth.tokens import default_token_generator
@@ -13,12 +17,13 @@ from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
-from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiTypes
-from .models import Role
+from drf_spectacular.utils import extend_schema, OpenApiParameter
+from drf_spectacular.types import OpenApiTypes
+from .models import Role, PasswordResetOTP
 from .serializers import (
     UserSerializer, UserDetailSerializer, SelfProfileSerializer,
-    ForgotPasswordSerializer, ResetPasswordSerializer, ChangePasswordSerializer,
-    RoleSerializer,
+    ForgotPasswordSerializer, ResetPasswordSerializer, VerifyResetOTPSerializer,
+    ChangePasswordSerializer, RoleSerializer,
 )
 
 User = get_user_model()
@@ -57,7 +62,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             }, status=status.HTTP_401_UNAUTHORIZED)
 
         user = serializer.user
-        tokens = serializer.validated_data
+        tokens = cast(Dict[str, Any], serializer.validated_data)
         
         # Calculate expiry dates
         access_expiry = timezone.now() + jwt_settings.ACCESS_TOKEN_LIFETIME
@@ -92,9 +97,33 @@ class CustomTokenObtainPairView(TokenObtainPairView):
             "error": None
         })
 
+def send_password_reset_otp(user):
+    otp = f"{secrets.randbelow(10**6):06d}"
+    expires_at = timezone.now() + timedelta(minutes=15)
+    PasswordResetOTP.objects.create(user=user, otp=otp, expires_at=expires_at)
+
+    verify_link = f"{settings.FRONTEND_URL}/reset-password/verify?email={quote_plus(user.email)}"
+    user_display_name = getattr(user, 'name', user.username)
+    subject = "Password Reset Code"
+    message = (
+        f"Hello {user_display_name},\n\n"
+        f"You requested a password reset. Use the 6-digit code below to verify your email and set a new password:\n\n"
+        f"{otp}\n\n"
+        f"Enter this code on the password verification page:\n{verify_link}\n\n"
+        "This code expires in 15 minutes. If you did not request this, please ignore this email."
+    )
+
+    send_mail(
+        subject,
+        message,
+        settings.DEFAULT_FROM_EMAIL,
+        [user.email],
+        fail_silently=False,
+    )
+
 class ForgotPasswordView(APIView):
     """
-    Endpoint to request a password reset email.
+    Endpoint to request a password reset code.
     """
     permission_classes = [permissions.AllowAny]
     serializer_class = ForgotPasswordSerializer
@@ -103,44 +132,99 @@ class ForgotPasswordView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        data: Dict[str, Any] = serializer.validated_data # type: ignore
-        
+        data: Dict[str, Any] = cast(Dict[str, Any], serializer.validated_data)
+
         email = data['email']
         
         try:
             user = User.objects.get(email=email)
-            # Generate token and uid
-            token = default_token_generator.make_token(user)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            
-            # Construct reset link (Frontend URL)
-            reset_link = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
-            
-            # Send email
-            # We usegetattr to avoid Pylance issues with custom fields on AbstractUser
-            user_display_name = getattr(user, 'name', user.username)
-            subject = "Password Reset Requested"
-            message = f"Hello {user_display_name},\n\nYou requested a password reset. Click the link below to reset your password:\n\n{reset_link}\n\nIf you did not request this, please ignore this email."
-            
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [email],
-                fail_silently=False,
-            )
+            send_password_reset_otp(user)
         except User.DoesNotExist:
-            # We still return 200 for security reasons (don't reveal registered emails)
             pass
 
         return Response(
-            {"message": "If an account exists with this email, a reset link has been sent."},
+            {"message": "If an account exists with this email, a reset code has been sent."},
+            status=status.HTTP_200_OK
+        )
+
+class ResendResetOTPView(APIView):
+    """
+    Endpoint to resend a password reset code.
+    """
+    permission_classes = [permissions.AllowAny]
+    serializer_class = ForgotPasswordSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        data: Dict[str, Any] = cast(Dict[str, Any], serializer.validated_data)
+        email = data['email']
+
+        try:
+            user = User.objects.get(email=email)
+            send_password_reset_otp(user)
+        except User.DoesNotExist:
+            pass
+
+        return Response(
+            {"message": "If an account exists with this email, a new reset code has been sent."},
+            status=status.HTTP_200_OK
+        )
+
+class VerifyResetOTPView(APIView):
+    """
+    Endpoint to verify a password reset code.
+    """
+    permission_classes = [permissions.AllowAny]
+    serializer_class = VerifyResetOTPSerializer
+
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        
+        data: Dict[str, Any] = cast(Dict[str, Any], serializer.validated_data)
+        email = data['email']
+        otp = data['otp']
+
+        try:
+            user = User.objects.get(email=email)
+        except User.DoesNotExist:
+            return Response(
+                {"error": "Invalid or expired reset code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        otp_record = PasswordResetOTP.objects.filter(
+            user=user,
+            is_used=False,
+            expires_at__gt=timezone.now(),
+            otp=otp,
+        ).order_by('-created_at').first()
+
+        if not otp_record:
+            recent_otp = PasswordResetOTP.objects.filter(
+                user=user,
+                is_used=False,
+                expires_at__gt=timezone.now(),
+            ).order_by('-created_at').first()
+            if recent_otp:
+                recent_otp.attempts += 1
+                recent_otp.save(update_fields=['attempts'])
+
+            return Response(
+                {"error": "Invalid or expired reset code."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        return Response(
+            {"message": "Reset code verified."},
             status=status.HTTP_200_OK
         )
 
 class ResetPasswordView(APIView):
     """
-    Endpoint to reset password using a token.
+    Endpoint to reset password using an email verification code.
     """
     permission_classes = [permissions.AllowAny]
     serializer_class = ResetPasswordSerializer
@@ -149,25 +233,29 @@ class ResetPasswordView(APIView):
         serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         
-        data: Dict[str, Any] = serializer.validated_data # type: ignore
-            
-        uidb64 = data['uidb64']
-        token = data['token']
+        data: Dict[str, Any] = cast(Dict[str, Any], serializer.validated_data)
+        email = data['email']
+        otp = data['otp']
         password = data['password']
 
         try:
-            # Decode user ID
-            uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=uid)
-            
-            # Check if token is valid
-            if not default_token_generator.check_token(user, token):
+            user = User.objects.get(email=email)
+            otp_record = PasswordResetOTP.objects.filter(
+                user=user,
+                otp=otp,
+                is_used=False,
+                expires_at__gt=timezone.now()
+            ).order_by('-created_at').first()
+
+            if not otp_record:
                 return Response(
-                    {"error": "Invalid or expired reset link."},
+                    {"error": "Invalid or expired reset code."},
                     status=status.HTTP_400_BAD_REQUEST
                 )
-            
-            # Set new password
+
+            otp_record.is_used = True
+            otp_record.save(update_fields=['is_used'])
+
             user.set_password(password)
             user.save()
             
@@ -176,7 +264,7 @@ class ResetPasswordView(APIView):
                 status=status.HTTP_200_OK
             )
             
-        except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+        except User.DoesNotExist:
             return Response(
                 {"error": "Invalid request."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -190,12 +278,14 @@ class ChangePasswordView(APIView):
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = ChangePasswordSerializer
 
-    @extend_schema(request=ChangePasswordSerializer)
+    @extend_schema(request=ChangePasswordSerializer, tags=['Authentication'])
     def post(self, request):
         serializer = self.serializer_class(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
 
-        request.user.set_password(serializer.validated_data['new_password'])
+        data: Dict[str, Any] = cast(Dict[str, Any], serializer.validated_data)
+
+        request.user.set_password(data['new_password'])
         request.user.save(update_fields=['password'])
 
         return Response(
@@ -226,7 +316,7 @@ class UserViewSet(viewsets.ModelViewSet):
         return UserSerializer
 
     @action(detail=False, methods=['get', 'patch'], url_path='me', permission_classes=[permissions.IsAuthenticated])
-    def me(self, request):
+    def me(self, request: Request):
         if request.method.lower() == 'get':
             serializer = self.get_serializer(request.user)
             return Response(serializer.data)
@@ -259,11 +349,12 @@ class UserViewSet(viewsets.ModelViewSet):
             # Log error but don't fail user creation
             print(f"Failed to send invitation email: {e}")
 
-    def get_queryset(self):
+    def get_queryset(self) -> Any:
         queryset = self.queryset
-        
+        req = cast(Request, self.request)
+
         # Filter by role (UUID or slug)
-        role = self.request.query_params.get('role')
+        role = req.query_params.get('role')
         if role and role != 'all':
             if len(role) > 30: # Likely a UUID
                 queryset = queryset.filter(role_id=role)
@@ -271,12 +362,12 @@ class UserViewSet(viewsets.ModelViewSet):
                 queryset = queryset.filter(role__slug=role)
 
         # Filter by department
-        department = self.request.query_params.get('department')
+        department = req.query_params.get('department')
         if department and department != 'all':
             queryset = queryset.filter(department_id=department)
 
         # Search functionality
-        search = self.request.query_params.get('search')
+        search = req.query_params.get('search')
         if search:
             from django.db.models import Q
             queryset = queryset.filter(
