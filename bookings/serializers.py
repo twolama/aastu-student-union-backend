@@ -39,10 +39,17 @@ class BookingListSerializer(serializers.ModelSerializer):
     @extend_schema_field(str)
     def get_time_label(self, obj):
         if isinstance(obj.selected_slots, list) and obj.selected_slots:
+            def format_12h(t_str):
+                try:
+                    h = int(t_str.split(':')[0])
+                    if h == 12: return "12 PM"
+                    if h > 12: return f"{h-12} PM"
+                    return f"{h} AM"
+                except: return t_str
             sorted_slots = sorted(obj.selected_slots)
             if len(sorted_slots) == 1:
-                return sorted_slots[0]
-            return f"{sorted_slots[0]} - {sorted_slots[-1]}"
+                return format_12h(sorted_slots[0])
+            return f"{format_12h(sorted_slots[0])} - {format_12h(sorted_slots[-1])}"
         return obj.time_range
 
 class BookingDetailSerializer(serializers.ModelSerializer):
@@ -96,10 +103,17 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     @extend_schema_field(str)
     def get_time_label(self, obj):
         if isinstance(obj.selected_slots, list) and obj.selected_slots:
+            def format_12h(t_str):
+                try:
+                    h = int(t_str.split(':')[0])
+                    if h == 12: return "12 PM"
+                    if h > 12: return f"{h-12} PM"
+                    return f"{h} AM"
+                except: return t_str
             sorted_slots = sorted(obj.selected_slots)
             if len(sorted_slots) == 1:
-                return sorted_slots[0]
-            return f"{sorted_slots[0]} - {sorted_slots[-1]}"
+                return format_12h(sorted_slots[0])
+            return f"{format_12h(sorted_slots[0])} - {format_12h(sorted_slots[-1])}"
         return obj.time_range
 
     @extend_schema_field(str)

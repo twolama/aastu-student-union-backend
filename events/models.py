@@ -18,7 +18,15 @@ class Event(SoftDeleteModel):
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='upcoming')
     is_mega_event = models.BooleanField(default=False)
     is_archived = models.BooleanField(default=False) # Frontend explicit flag
-    max_capacity = models.PositiveIntegerField(default=0) # New explicit field
+    max_capacity = models.BigIntegerField(default=0) # Changed to BigIntegerField to support large capacity numbers
+    
+    booking = models.ForeignKey(
+        'bookings.Booking',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="associated_events"
+    )
     
     organizing_club = models.ForeignKey(
         'clubs.Club',

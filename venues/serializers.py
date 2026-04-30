@@ -28,9 +28,11 @@ class VenueListSerializer(serializers.ModelSerializer):
         model = Venue
         fields = (
             'id', 'name', 'category', 'status', 'max_capacity', 
-            'capacity_label', 'campus_block', 'location', 
-            'short_description', 'hero_image', 'thumbnail', 
-            'image_url', 'created_at', 'updated_at'
+            'capacity_label', 'campus_block', 'floor_level', 
+            'location', 'nearby_landmarks', 'short_description', 
+            'full_description', 'is_publicly_available', 
+            'hero_image', 'thumbnail', 'image_url', 
+            'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'created_at', 'updated_at')
 

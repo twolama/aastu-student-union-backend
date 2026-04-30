@@ -58,7 +58,7 @@ class Booking(SoftDeleteModel):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="booking"
+        related_name="event_booking"
     )
 
     class Meta(SoftDeleteModel.Meta):

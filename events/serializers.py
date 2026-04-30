@@ -5,6 +5,26 @@ from users.serializers import UserMinimalSerializer
 from clubs.serializers import ClubMinimalSerializer
 from venues.serializers import VenueSerializer
 
+def flatten_logistics_data(val):
+    """
+    Recursively flattens data that has been corrupted by spreading arrays into objects
+    (creating '0', '1', etc. keys).
+    """
+    if isinstance(val, list):
+        return [flatten_logistics_data(i) for i in val]
+    if isinstance(val, dict):
+        # Check for the common '0' key corruption from JS spreads
+        if "0" in val:
+            nested = val.pop("0")
+            # Recursively flatten the nested part
+            flattened_nested = flatten_logistics_data(nested)
+            if isinstance(flattened_nested, dict):
+                # Merge: outer fields (usually newer) override nested ones
+                return {**flattened_nested, **val}
+            # If nested wasn't a dict, just keep going with the current dict
+        return {k: flatten_logistics_data(v) for k, v in val.items()}
+    return val
+
 class EventVolunteerSerializer(serializers.ModelSerializer):
     user = UserMinimalSerializer(read_only=True)
     
@@ -35,7 +55,7 @@ class EventListSerializer(serializers.ModelSerializer):
             'organizing_club', 'venue', 'physical_location_details',
             'cover_image', 'start_date_time', 'end_date_time',
             'date_day', 'date_month', 'registration_link',
-            'attendee_count', 'created_at', 'updated_at'
+            'attendee_count', 'booking', 'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'date_day', 'date_month', 'attendee_count')
 
@@ -59,6 +79,12 @@ class EventDetailSerializer(EventListSerializer):
             'description', 'logistics', 'attendance', 'attendees', 'volunteers'
         )
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        if 'logistics' in data and data['logistics']:
+            data['logistics'] = flatten_logistics_data(data['logistics'])
+        return data
+
 class EventSerializer(EventDetailSerializer):
     """
     Serializer for creation/update and internal logic.
@@ -80,6 +106,10 @@ class EventSerializer(EventDetailSerializer):
                     data[field] = json.loads(val)
                 except (ValueError, TypeError):
                      pass
+        
+        # Flatten logistics if it comes in corrupted
+        if 'logistics' in data and data['logistics']:
+            data['logistics'] = flatten_logistics_data(data['logistics'])
 
         return super().to_internal_value(data)
 
@@ -89,6 +119,20 @@ class EventSerializer(EventDetailSerializer):
         for volunteer_data in volunteers_data:
             EventVolunteer.objects.create(event=event, **volunteer_data)
         return event
+
+    def update(self, instance, validated_data):
+        volunteers_data = validated_data.pop('volunteers', None)
+        
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+        
+        if volunteers_data is not None:
+            instance.volunteers.all().delete()
+            for volunteer_data in volunteers_data:
+                EventVolunteer.objects.create(event=instance, **volunteer_data)
+                
+        return instance
 
     def validate_attendance(self, value):
         required = ['current', 'capacity']
