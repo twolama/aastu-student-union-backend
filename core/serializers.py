@@ -96,11 +96,11 @@ class NotificationItemSerializer(serializers.ModelSerializer):
             'created_at',
         )
 
-    def get_unread(self, obj):
+    def get_unread(self, obj) -> bool:
         read_ids = self.context.get('read_ids', set())
         return obj.id not in read_ids
 
-    def get_time_label(self, obj):
+    def get_time_label(self, obj) -> str:
         dt = obj.created_at
         now = timezone.now()
         delta = now - dt
@@ -258,6 +258,18 @@ class HealthCheckDataSerializer(serializers.Serializer):
 
 class HealthCheckResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
+
+
+class UserPermissionsDataSerializer(serializers.Serializer):
+    userId = serializers.UUIDField()
+    permissions = serializers.ListField(child=serializers.CharField())
+    djangoPermissions = serializers.ListField(child=serializers.CharField())
+
+
+class UserPermissionsResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    data = UserPermissionsDataSerializer()
     message = serializers.CharField()
     response_data = HealthCheckDataSerializer(source='data')
     statusCode = serializers.IntegerField()

@@ -127,10 +127,10 @@ class UserSerializer(serializers.ModelSerializer):
             user.roles.set(roles)
         return user
 
-    def get_permissions(self, obj):
+    def get_permissions(self, obj) -> list[str]:
         return permissions_to_frontend_keys(obj.get_all_permissions())
 
-    def get_django_permissions(self, obj):
+    def get_django_permissions(self, obj) -> list[str]:
         return sorted(obj.get_all_permissions())
 
 class UserDetailSerializer(UserSerializer):
@@ -209,9 +209,21 @@ class SelfProfileSerializer(serializers.ModelSerializer):
             data['phone_number'] = data.get('phone')
         return super().to_internal_value(data)
 
-    def get_permissions(self, obj):
+    def get_permissions(self, obj) -> list[str]:
         return permissions_to_frontend_keys(obj.get_all_permissions())
 
-    def get_django_permissions(self, obj):
+    def get_django_permissions(self, obj) -> list[str]:
         return sorted(obj.get_all_permissions())
+
+
+class UserPermissionsDataSerializer(serializers.Serializer):
+    userId = serializers.UUIDField()
+    permissions = serializers.ListField(child=serializers.CharField())
+    djangoPermissions = serializers.ListField(child=serializers.CharField())
+
+
+class UserPermissionsResponseSerializer(serializers.Serializer):
+    success = serializers.BooleanField()
+    message = serializers.CharField()
+    data = UserPermissionsDataSerializer()
 

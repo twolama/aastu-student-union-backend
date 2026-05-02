@@ -28,7 +28,7 @@ class AnnouncementListSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'published_date', 'author_role_name', 'category_details')
 
-    def get_body_excerpt(self, obj):
+    def get_body_excerpt(self, obj) -> str:
         if not obj.body:
             return ""
         # Basic strip tags (optional, but recommended if body is HTML)

@@ -23,7 +23,7 @@ from .permissions import permissions_to_frontend_keys
 from .serializers import (
     UserSerializer, UserDetailSerializer, SelfProfileSerializer,
     ForgotPasswordSerializer, ResetPasswordSerializer, VerifyResetOTPSerializer,
-    ChangePasswordSerializer, RoleSerializer,
+    ChangePasswordSerializer, RoleSerializer, UserPermissionsResponseSerializer,
 )
 
 User = get_user_model()
@@ -405,6 +405,7 @@ class UserViewSet(viewsets.ModelViewSet):
 class UserPermissionsView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
+    @extend_schema(responses=UserPermissionsResponseSerializer, tags=['Authentication'])
     def get(self, request: Request, user_id: str):
         if str(request.user.pk) != str(user_id) and not request.user.is_staff and not request.user.is_superuser:
             return Response(

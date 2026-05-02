@@ -95,7 +95,7 @@ class User(SoftDeleteModel, AbstractUser):
         self.groups.set(manual_groups.union(role_groups))
 
     @property
-    def role(self):
+    def role(self) -> Role | None:
         return self.roles.first()
 
     @property

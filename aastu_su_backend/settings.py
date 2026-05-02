@@ -238,6 +238,28 @@ SPECTACULAR_SETTINGS = {
     ],
     'COMPONENT_SPLIT_PATCH': True,
     'COMPONENT_SPLIT_REQUEST': True,
+    'ENUM_NAME_OVERRIDES': {
+        'BookingStatusEnum': [
+            ('pending', 'Pending Approval'),
+            ('approved', 'Approved'),
+            ('cancelled', 'Cancelled'),
+        ],
+        'ClubStatusEnum': [
+            ('active', 'Active'),
+            ('pending', 'Pending Approval'),
+            ('rejected', 'Rejected'),
+        ],
+        'EventStatusEnum': [
+            ('upcoming', 'Upcoming Event'),
+            ('live-now', 'Happening Now'),
+            ('archived', 'Past Event'),
+        ],
+        'VenueStatusEnum': [
+            ('active', 'Active'),
+            ('maintenance', 'Maintenance'),
+            ('inactive', 'Inactive'),
+        ],
+    },
     'PARSER_WHITELIST': [
         'rest_framework.parsers.JSONParser',
         'rest_framework.parsers.FormParser',
