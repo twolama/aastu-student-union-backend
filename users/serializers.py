@@ -100,12 +100,9 @@ class UserSerializer(serializers.ModelSerializer):
         # Default username to student_id or email if not provided
         if not validated_data.get('username'):
             validated_data['username'] = validated_data.get('student_id') or validated_data.get('email')
-        
-        # Create user without password (will be set via invitation/reset)
-        user = User.objects.create_user(**validated_data)
-        user.set_unusable_password()
-        user.save()
-        return user
+
+        # Password is assigned by onboarding flow in the view layer.
+        return User.objects.create_user(**validated_data)
 
 class UserDetailSerializer(UserSerializer):
     """

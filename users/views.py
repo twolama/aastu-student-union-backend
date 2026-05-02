@@ -5,16 +5,15 @@ from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
 import secrets
+import logging
 from datetime import datetime, timedelta
 from typing import Any, Dict, cast
 from django.db.models.query import QuerySet
+from django.db import transaction
 from rest_framework.request import Request
 from urllib.parse import quote_plus
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from django.contrib.auth.tokens import default_token_generator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
 from django.core.mail import send_mail
 from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter
@@ -27,6 +26,7 @@ from .serializers import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 
 class RoleViewSet(viewsets.ModelViewSet):
@@ -79,6 +79,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     "studentId": user.student_id,
                     "role": user.role.slug if user.role else None,
                     "email": user.email,
+                    "mustChangePassword": user.must_change_password,
                     "registrationDate": user.date_joined.isoformat(),
                     "status": "Active" if user.is_active else "Inactive",
                 },
@@ -256,8 +257,10 @@ class ResetPasswordView(APIView):
             otp_record.is_used = True
             otp_record.save(update_fields=['is_used'])
 
-            user.set_password(password)
-            user.save()
+            reset_user = cast(Any, user)
+            reset_user.set_password(password)
+            reset_user.must_change_password = False
+            reset_user.save(update_fields=['password', 'must_change_password'])
             
             return Response(
                 {"message": "Password has been reset successfully."},
@@ -285,8 +288,10 @@ class ChangePasswordView(APIView):
 
         data: Dict[str, Any] = cast(Dict[str, Any], serializer.validated_data)
 
-        request.user.set_password(data['new_password'])
-        request.user.save(update_fields=['password'])
+        current_user = cast(Any, request.user)
+        current_user.set_password(data['new_password'])
+        current_user.must_change_password = False
+        current_user.save(update_fields=['password', 'must_change_password'])
 
         return Response(
             {"message": "Password changed successfully."},
@@ -327,27 +332,39 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def perform_create(self, serializer):
-        user = serializer.save()
-        
-        # Logic to send invitation email
-        try:
-            token = default_token_generator.make_token(user)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            setup_link = f"{settings.FRONTEND_URL}/reset-password?uid={uid}&token={token}"
-            
+        with transaction.atomic():
+            user = serializer.save()
+            temp_password = secrets.token_urlsafe(9)
+
+            user.set_password(temp_password)
+            user.must_change_password = True
+            user.save(update_fields=['password', 'must_change_password'])
+
             subject = "Welcome to AASTU Student Union Portal"
-            message = f"Hello {user.name},\n\nAn account has been created for you on the AASTU Student Union Portal. Please click the link below to set your password and access your account:\n\n{setup_link}\n\nWelcome aboard!"
-            
-            send_mail(
-                subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
-                fail_silently=False,
+            message = (
+                f"Hello {user.name},\n\n"
+                "An account has been created for you on the AASTU Student Union Portal.\n\n"
+                f"Temporary password: {temp_password}\n\n"
+                "Sign in using your username, student ID, or email with this temporary password. "
+                "You will be required to change it immediately after login.\n\n"
+                "Welcome aboard!"
             )
-        except Exception as e:
-            # Log error but don't fail user creation
-            print(f"Failed to send invitation email: {e}")
+
+            try:
+                send_mail(
+                    subject,
+                    message,
+                    settings.DEFAULT_FROM_EMAIL,
+                    [user.email],
+                    fail_silently=False,
+                )
+            except Exception:
+                logger.exception("Failed to send invitation email for newly created user", extra={"user_id": str(user.pk), "email": user.email})
+                raise serializers.ValidationError({
+                    "email": [
+                        "Temporary password email could not be sent. User account was not created."
+                    ]
+                })
 
     def get_queryset(self) -> Any:
         queryset = self.queryset
