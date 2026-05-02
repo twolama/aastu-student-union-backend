@@ -20,6 +20,7 @@ from .models import College, Department
 from .serializers import SystemStatsResponseSerializer, HealthCheckResponseSerializer
 from .serializers import CollegeSerializer, DepartmentSerializer
 from .serializers import AnalyticsDashboardResponseSerializer
+from analytics.permissions import HasAnalyticsPermission
 from users.models import User
 from clubs.models import Club
 from events.models import Event
@@ -59,7 +60,7 @@ class AnalyticsDashboardView(APIView):
     """
     Aggregated statistics for the frontend Statistics and Reports dashboard.
     """
-    permission_classes = [permissions.AllowAny]  # Change to IsAdminUser if you want to restrict
+    permission_classes = [permissions.IsAuthenticated, HasAnalyticsPermission]
     PERIOD_CHOICES = {'last-8-months', 'academic-year', 'calendar-year'}
 
     @extend_schema(
@@ -458,8 +459,7 @@ class AnalyticsReportExportView(APIView):
     """
     Export analytics report as CSV for the selected period.
     """
-    # AllowAny for development/demo; switch back to IsAdminUser in production.
-    permission_classes = [permissions.AllowAny]
+    permission_classes = [permissions.IsAuthenticated, HasAnalyticsPermission]
 
     @extend_schema(
         parameters=[
