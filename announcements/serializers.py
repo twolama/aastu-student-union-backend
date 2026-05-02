@@ -23,7 +23,7 @@ class AnnouncementListSerializer(serializers.ModelSerializer):
         fields = (
             'id', 'title', 'body_excerpt', 'category', 'category_details',
             'is_pinned', 'is_published', 'author', 'author_name', 
-            'author_role_name', 'image', 'tags', 'procedure_steps',
+            'author_role_name', 'image', 'tags',
             'published_date', 'created_at', 'updated_at'
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'published_date', 'author_role_name', 'category_details')
@@ -43,7 +43,7 @@ class AnnouncementDetailSerializer(AnnouncementListSerializer):
     Includes the full rich-text 'body'.
     """
     class Meta(AnnouncementListSerializer.Meta):
-        fields = AnnouncementListSerializer.Meta.fields + ('body',)
+        fields = AnnouncementListSerializer.Meta.fields + ('body', 'procedure_steps')
 
 class AnnouncementSerializer(AnnouncementDetailSerializer):
     """
