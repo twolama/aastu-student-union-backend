@@ -1,5 +1,6 @@
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status, serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from drf_spectacular.utils import extend_schema
@@ -46,6 +47,21 @@ class EventViewSet(viewsets.ModelViewSet):
             queryset = queryset.filter(organizing_club_id=club)
             
         return queryset.order_by('start_date_time')
+
+    def perform_create(self, serializer):
+        if not self.request.user.has_perm('events.add_event'):
+            raise PermissionDenied('You do not have permission to create events.')
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if not self.request.user.has_perm('events.change_event'):
+            raise PermissionDenied('You do not have permission to edit events.')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not self.request.user.has_perm('events.delete_event'):
+            raise PermissionDenied('You do not have permission to delete events.')
+        instance.delete()
 
     @extend_schema(request=None)
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])

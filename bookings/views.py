@@ -1,5 +1,6 @@
 from django.db.models import Q
 from rest_framework import viewsets, permissions, status, serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Booking
@@ -59,14 +60,28 @@ class BookingViewSet(viewsets.ModelViewSet):
         return queryset
 
     def perform_create(self, serializer):
-        # Automatically set requester to the logged-in user
+        if not self.request.user.has_perm('bookings.add_booking'):
+            raise PermissionDenied('You do not have permission to create bookings.')
         serializer.save(requester=self.request.user)
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    def perform_update(self, serializer):
+        if not self.request.user.has_perm('bookings.change_booking'):
+            raise PermissionDenied('You do not have permission to edit bookings.')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not self.request.user.has_perm('bookings.delete_booking'):
+            raise PermissionDenied('You do not have permission to delete bookings.')
+        instance.delete()
+
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def approve(self, request, pk=None):
         """
         Action for admins to approve a booking request.
         """
+        if not request.user.has_perm('bookings.approve_booking'):
+            raise PermissionDenied('You do not have permission to approve bookings.')
+
         booking = self.get_object()
         if booking.status != 'pending':
             return Response({'error': 'Booking is not in pending state'}, status=status.HTTP_400_BAD_REQUEST)
@@ -78,11 +93,14 @@ class BookingViewSet(viewsets.ModelViewSet):
         
         return Response({'status': 'approved'}, status=status.HTTP_200_OK)
 
-    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAdminUser])
+    @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def cancel(self, request, pk=None):
         """
         Action for admins to cancel a booking request.
         """
+        if not request.user.has_perm('bookings.reject_booking'):
+            raise PermissionDenied('You do not have permission to reject bookings.')
+
         booking = self.get_object()
         booking.status = 'cancelled'
         booking.save()

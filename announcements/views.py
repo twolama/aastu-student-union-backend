@@ -1,5 +1,6 @@
 from rest_framework import viewsets, permissions, filters, serializers
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import PermissionDenied
 from .models import Announcement, AnnouncementCategory
 from .serializers import (
     AnnouncementSerializer, AnnouncementListSerializer, AnnouncementDetailSerializer,
@@ -63,4 +64,14 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
 
         user = self.request.user if getattr(self.request.user, 'is_authenticated', False) else None
         serializer.save(author=user)
+
+    def perform_update(self, serializer):
+        if not self.request.user.has_perm('announcements.change_announcement'):
+            raise PermissionDenied('You do not have permission to edit announcements.')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not self.request.user.has_perm('announcements.delete_announcement'):
+            raise PermissionDenied('You do not have permission to delete announcements.')
+        instance.delete()
 

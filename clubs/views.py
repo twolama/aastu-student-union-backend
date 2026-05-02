@@ -1,4 +1,5 @@
 from rest_framework import viewsets, permissions, status, serializers
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Club, ClubCategory
@@ -47,6 +48,21 @@ class ClubViewSet(viewsets.ModelViewSet):
         if category:
             queryset = queryset.filter(category__slug=category)
         return queryset
+
+    def perform_create(self, serializer):
+        if not self.request.user.has_perm('clubs.add_club'):
+            raise PermissionDenied('You do not have permission to create clubs.')
+        serializer.save()
+
+    def perform_update(self, serializer):
+        if not self.request.user.has_perm('clubs.change_club'):
+            raise PermissionDenied('You do not have permission to edit clubs.')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if not self.request.user.has_perm('clubs.delete_club'):
+            raise PermissionDenied('You do not have permission to delete clubs.')
+        instance.delete()
 
     @action(detail=True, methods=['get'], url_path='upcoming-events')
     def upcoming_events(self, request, pk=None):

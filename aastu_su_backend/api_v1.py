@@ -13,6 +13,7 @@ from users.views import (
     VerifyResetOTPView,
     ChangePasswordView,
     CustomTokenObtainPairView,
+    UserPermissionsView,
 )
 from announcements.views import AnnouncementViewSet, AnnouncementCategoryViewSet
 from core.views import (
@@ -54,6 +55,7 @@ urlpatterns = [
     path('auth/verify-reset-otp/', VerifyResetOTPView.as_view(), name='verify_reset_otp'),
     path('auth/reset-password/', ResetPasswordView.as_view(), name='reset_password'),
     path('auth/change-password/', ChangePasswordView.as_view(), name='change_password'),
+    path('permissions/<uuid:user_id>/', UserPermissionsView.as_view(), name='user_permissions'),
     
     # System Health
     path('system/stats/', SystemStatsView.as_view(), name='system_stats'),

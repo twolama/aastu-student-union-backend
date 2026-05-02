@@ -19,6 +19,7 @@ from django.conf import settings
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from .models import Role, PasswordResetOTP
+from .permissions import permissions_to_frontend_keys
 from .serializers import (
     UserSerializer, UserDetailSerializer, SelfProfileSerializer,
     ForgotPasswordSerializer, ResetPasswordSerializer, VerifyResetOTPSerializer,
@@ -79,6 +80,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     "studentId": user.student_id,
                     "role": user.role.slug if user.role else None,
                     "roles": [role.slug for role in user.roles.all()],
+                    "permissions": permissions_to_frontend_keys(user.get_all_permissions()),
+                    "djangoPermissions": sorted(user.get_all_permissions()),
                     "email": user.email,
                     "mustChangePassword": user.must_change_password,
                     "registrationDate": user.date_joined.isoformat(),
@@ -397,4 +400,32 @@ class UserViewSet(viewsets.ModelViewSet):
             )
 
         return queryset.order_by('name')
+
+
+class UserPermissionsView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request: Request, user_id: str):
+        if str(request.user.pk) != str(user_id) and not request.user.is_staff and not request.user.is_superuser:
+            return Response(
+                {"detail": "You do not have permission to view these permissions."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        user = User.objects.filter(pk=user_id).first()
+        if not user:
+            return Response({"detail": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        django_permissions = sorted(user.get_all_permissions())
+        return Response(
+            {
+                "success": True,
+                "message": "Permissions retrieved successfully.",
+                "data": {
+                    "userId": str(user.pk),
+                    "permissions": permissions_to_frontend_keys(django_permissions),
+                    "djangoPermissions": django_permissions,
+                },
+            }
+        )
 

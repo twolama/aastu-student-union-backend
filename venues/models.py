@@ -74,6 +74,10 @@ class Venue(SoftDeleteModel):
     class Meta(SoftDeleteModel.Meta):
         verbose_name = 'Venue'
         verbose_name_plural = 'Venues'
+        permissions = [
+            ('manage_venue', 'Can manage venues'),
+            ('manage_venue_gallery', 'Can manage venue gallery images'),
+        ]
         indexes = [
             models.Index(fields=['status']),
             models.Index(fields=['name']),

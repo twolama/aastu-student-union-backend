@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from .models import Role
+from .permissions import permissions_to_frontend_keys
 from core.serializers import DepartmentSerializer, CollegeMinimalSerializer
 
 User = get_user_model()
@@ -64,6 +65,8 @@ class UserSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
     roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all(), required=False)
     role = serializers.ReadOnlyField(source='role.slug')
+    permissions = serializers.SerializerMethodField()
+    django_permissions = serializers.SerializerMethodField()
 
     class Meta:
         model = User
@@ -75,6 +78,8 @@ class UserSerializer(serializers.ModelSerializer):
             'department_name',
             'roles',
             'role',
+            'permissions',
+            'django_permissions',
             'avatar',
             'email',
             'phone_number',
@@ -122,6 +127,12 @@ class UserSerializer(serializers.ModelSerializer):
             user.roles.set(roles)
         return user
 
+    def get_permissions(self, obj):
+        return permissions_to_frontend_keys(obj.get_all_permissions())
+
+    def get_django_permissions(self, obj):
+        return sorted(obj.get_all_permissions())
+
 class UserDetailSerializer(UserSerializer):
     """
     Detailed user data with expanded department, college and role info.
@@ -146,6 +157,8 @@ class SelfProfileSerializer(serializers.ModelSerializer):
     role_details = RoleSerializer(source='role', read_only=True)
     roles_details = RoleSerializer(source='roles', many=True, read_only=True)
     role = serializers.CharField(source='role.slug', read_only=True)
+    permissions = serializers.SerializerMethodField()
+    django_permissions = serializers.SerializerMethodField()
     college = serializers.UUIDField(source='department.college_id', read_only=True)
     college_details = CollegeMinimalSerializer(source='department.college', read_only=True)
 
@@ -168,6 +181,8 @@ class SelfProfileSerializer(serializers.ModelSerializer):
             'role',
             'role_details',
             'roles_details',
+            'permissions',
+            'django_permissions',
             'initials',
             'bio',
         )
@@ -181,6 +196,8 @@ class SelfProfileSerializer(serializers.ModelSerializer):
             'role',
             'role_details',
             'roles_details',
+            'permissions',
+            'django_permissions',
             'initials',
         )
 
@@ -191,4 +208,10 @@ class SelfProfileSerializer(serializers.ModelSerializer):
         if 'phone_number' not in data and 'phone' in data:
             data['phone_number'] = data.get('phone')
         return super().to_internal_value(data)
+
+    def get_permissions(self, obj):
+        return permissions_to_frontend_keys(obj.get_all_permissions())
+
+    def get_django_permissions(self, obj):
+        return sorted(obj.get_all_permissions())
 

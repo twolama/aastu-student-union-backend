@@ -64,6 +64,10 @@ class Booking(SoftDeleteModel):
     class Meta(SoftDeleteModel.Meta):
         verbose_name = 'Booking'
         verbose_name_plural = 'Bookings'
+        permissions = [
+            ('approve_booking', 'Can approve booking requests'),
+            ('reject_booking', 'Can reject booking requests'),
+        ]
         indexes = [
             models.Index(fields=['status']),
             models.Index(fields=['requested_date_iso']),
