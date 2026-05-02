@@ -78,6 +78,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     "name": user.name,
                     "studentId": user.student_id,
                     "role": user.role.slug if user.role else None,
+                    "roles": [role.slug for role in user.roles.all()],
                     "email": user.email,
                     "mustChangePassword": user.must_change_password,
                     "registrationDate": user.date_joined.isoformat(),
@@ -374,9 +375,10 @@ class UserViewSet(viewsets.ModelViewSet):
         role = req.query_params.get('role')
         if role and role != 'all':
             if len(role) > 30: # Likely a UUID
-                queryset = queryset.filter(role_id=role)
+                queryset = queryset.filter(roles__id=role)
             else:
-                queryset = queryset.filter(role__slug=role)
+                queryset = queryset.filter(roles__slug=role)
+            queryset = queryset.distinct()
 
         # Filter by department
         department = req.query_params.get('department')

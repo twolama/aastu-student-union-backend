@@ -1,23 +1,23 @@
 from django.conf import settings
 from django.db import models
+from django.db.models.signals import m2m_changed
+from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser, UserManager, Group
 from core.models import SoftDeleteModel, Department
 
 class Role(SoftDeleteModel):
     """
     Dynamic roles for the Student Union.
-    Each role can be linked to a Django Group for permission management.
+    Each role can be linked to multiple Django Groups for permission management.
     """
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
     description = models.TextField(blank=True)
-    group = models.OneToOneField(
-        Group, 
-        on_delete=models.CASCADE, 
-        related_name='role_profile',
+    groups = models.ManyToManyField(
+        Group,
         blank=True,
-        null=True,
-        help_text="The Django Group that manages permissions for this role."
+        related_name='role_profiles',
+        help_text="The Django Groups that manage permissions for this role."
     )
     is_staff_role = models.BooleanField(default=False, help_text="Should users with this role have admin panel access?")
 
@@ -45,12 +45,11 @@ class User(SoftDeleteModel, AbstractUser):
         blank=True,
         related_name="students"
     )
-    role = models.ForeignKey(
+    roles = models.ManyToManyField(
         Role,
-        on_delete=models.SET_NULL,
-        null=True,
         blank=True,
-        related_name="users"
+        related_name="users",
+        help_text="The roles assigned to this user."
     )
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     bio = models.TextField(blank=True, null=True, help_text="Personal biography or office note.")
@@ -79,24 +78,58 @@ class User(SoftDeleteModel, AbstractUser):
         """
         Overwrite save to sync role permissions and admin access.
         """
-        if self.role:
-            # Automatically set is_staff if the role allows it
-            if self.role.is_staff_role:
-                self.is_staff = True
-            
-            # Note: Group assignment is normally handled AFTER first save if 
-            # using M2M, but since Role has a 1-to-1 to Group, we can 
-            # ensure the user is in that group here or via signals.
-        
+        if self.pk and self.roles.filter(is_staff_role=True).exists():
+            self.is_staff = True
+        elif not self.is_superuser:
+            self.is_staff = False
+
         super().save(*args, **kwargs)
 
-        # After saving, ensure user is in the correct group
-        if self.role and self.role.group:
-            self.groups.add(self.role.group)
+        # After saving, ensure user groups match current role groups.
+        if self.pk:
+            self._sync_role_groups()
+
+    def _sync_role_groups(self):
+        role_groups = Group.objects.filter(role_profiles__users=self).distinct()
+        manual_groups = self.groups.exclude(role_profiles__users=self).distinct()
+        self.groups.set(manual_groups.union(role_groups))
+
+    @property
+    def role(self):
+        return self.roles.first()
 
     @property
     def role_name(self) -> str:
         return self.role.name if self.role else "No Role"
+
+
+@receiver(m2m_changed, sender=User.roles.through)
+def user_roles_changed(sender, instance, action, reverse, model, pk_set, **kwargs):
+    if action not in ('post_add', 'post_remove', 'post_clear'):
+        return
+
+    if not instance.pk:
+        return
+
+    def sync_user(user):
+        has_staff_role = user.roles.filter(is_staff_role=True).exists()
+        new_staff_status = user.is_superuser or has_staff_role
+        if user.is_staff != new_staff_status:
+            user.is_staff = new_staff_status
+            user.save(update_fields=['is_staff'])
+        user._sync_role_groups()
+
+    if reverse:
+        # Role.users changed
+        if pk_set:
+            users = User.objects.filter(pk__in=pk_set)
+        else:
+            users = instance.users.all()
+        for user in users:
+            sync_user(user)
+    else:
+        # User.roles changed
+        sync_user(instance)
 
 
 class PasswordResetOTP(models.Model):

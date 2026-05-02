@@ -62,7 +62,9 @@ class UserMinimalSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     department_name = serializers.CharField(source='department.name', read_only=True)
-    
+    roles = serializers.PrimaryKeyRelatedField(many=True, queryset=Role.objects.all(), required=False)
+    role = serializers.ReadOnlyField(source='role.slug')
+
     class Meta:
         model = User
         fields = (
@@ -71,6 +73,7 @@ class UserSerializer(serializers.ModelSerializer):
             'student_id',
             'department',
             'department_name',
+            'roles',
             'role',
             'avatar',
             'email',
@@ -81,28 +84,43 @@ class UserSerializer(serializers.ModelSerializer):
             'dorm_block',
             'dorm_room',
         )
-        read_only_fields = ('id', 'initials', 'department_name')
+        read_only_fields = ('id', 'initials', 'department_name', 'role')
         extra_kwargs = {
             'username': {'required': False},
         }
 
     def to_internal_value(self, data):
         """
-        Backward compatibility for clients sending `phone` instead of `phone_number`.
+        Backward compatibility for clients sending `phone` instead of `phone_number`
+        and `role` instead of `roles`.
         """
         if hasattr(data, 'copy'):
             data = data.copy()
         if 'phone_number' not in data and 'phone' in data:
             data['phone_number'] = data.get('phone')
+        if 'role' in data and 'roles' not in data:
+            data['roles'] = [data.get('role')] if data.get('role') is not None else []
         return super().to_internal_value(data)
 
     def create(self, validated_data):
+        roles = validated_data.pop('roles', [])
+
         # Default username to student_id or email if not provided
         if not validated_data.get('username'):
             validated_data['username'] = validated_data.get('student_id') or validated_data.get('email')
 
         # Password is assigned by onboarding flow in the view layer.
-        return User.objects.create_user(**validated_data)
+        user = User.objects.create_user(**validated_data)
+        if roles:
+            user.roles.set(roles)
+        return user
+
+    def update(self, instance, validated_data):
+        roles = validated_data.pop('roles', None)
+        user = super().update(instance, validated_data)
+        if roles is not None:
+            user.roles.set(roles)
+        return user
 
 class UserDetailSerializer(UserSerializer):
     """
@@ -110,21 +128,24 @@ class UserDetailSerializer(UserSerializer):
     """
     department_details = DepartmentSerializer(source='department', read_only=True)
     role_details = RoleSerializer(source='role', read_only=True)
+    roles_details = RoleSerializer(source='roles', many=True, read_only=True)
     
     class Meta(UserSerializer.Meta):
         fields = UserSerializer.Meta.fields + (
             'phone_number', 'dorm_block', 'dorm_room', 
-            'department_details', 'role_details', 'is_active', 
+            'department_details', 'role_details', 'roles_details', 'is_active', 
             'is_staff', 'date_joined', 'last_login'
         )
         read_only_fields = UserSerializer.Meta.read_only_fields + (
-            'department_details', 'role_details', 'date_joined', 'last_login'
+            'department_details', 'role_details', 'roles_details', 'date_joined', 'last_login'
         )
 
 
 class SelfProfileSerializer(serializers.ModelSerializer):
     department_details = DepartmentSerializer(source='department', read_only=True)
     role_details = RoleSerializer(source='role', read_only=True)
+    roles_details = RoleSerializer(source='roles', many=True, read_only=True)
+    role = serializers.CharField(source='role.slug', read_only=True)
     college = serializers.UUIDField(source='department.college_id', read_only=True)
     college_details = CollegeMinimalSerializer(source='department.college', read_only=True)
 
@@ -143,8 +164,10 @@ class SelfProfileSerializer(serializers.ModelSerializer):
             'department_details',
             'college',
             'college_details',
+            'roles',
             'role',
             'role_details',
+            'roles_details',
             'initials',
             'bio',
         )
@@ -157,6 +180,7 @@ class SelfProfileSerializer(serializers.ModelSerializer):
             'college_details',
             'role',
             'role_details',
+            'roles_details',
             'initials',
         )
 

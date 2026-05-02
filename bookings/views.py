@@ -26,17 +26,17 @@ class BookingViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
         
-        # Ensure user has role and role has slug
-        if not hasattr(user, 'role') or not user.role:
+        # Ensure user has at least one role
+        if not hasattr(user, 'roles') or not user.roles.exists():
             return queryset.none()
 
-        role_slug = user.role.slug
+        role_slugs = set(user.roles.values_list('slug', flat=True))
         
         # Students should only see their own requests or their club's requests
-        if role_slug == 'general-student':
-             queryset = queryset.filter(requester=user)
-        elif role_slug == 'club-president':
-             queryset = queryset.filter(Q(requester=user) | Q(club__president=user))
+        if 'general-student' in role_slugs:
+            queryset = queryset.filter(requester=user)
+        elif 'club-president' in role_slugs:
+            queryset = queryset.filter(Q(requester=user) | Q(club__president=user))
              
         # Common filters
         status_param = self.request.query_params.get('status')
