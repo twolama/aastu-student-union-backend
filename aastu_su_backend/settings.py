@@ -175,25 +175,27 @@ USE_TZ = True
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-# Use WhiteNoise storage backend to serve compressed files with long-term
-# caching headers and manifest-based names.
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
 # Optional: project-level static dirs (add if you have local `static/` folders)
 STATICFILES_DIRS = []
 
-# Media files Configuration
-MEDIA_URL = 'media/'
+# Media files configuration
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Django 5+ storage configuration: define default/media + staticfiles via STORAGES.
 CLOUDINARY_URL = os.getenv('CLOUDINARY_URL', '')
-if CLOUDINARY_URL:
-    DEFAULT_FILE_STORAGE = 'core.custom_storage.CloudinaryStorage'
-    from core.custom_storage import CloudinaryStorage
-    import django.core.files.storage
-    django.core.files.storage.default_storage = CloudinaryStorage()
-else:
-    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+STORAGES = {
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+    'default': {
+        'BACKEND': (
+            'core.custom_storage.CloudinaryStorage'
+            if CLOUDINARY_URL
+            else 'django.core.files.storage.FileSystemStorage'
+        ),
+    },
+}
 
 # Email Configuration
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND') or (
