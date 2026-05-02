@@ -5,23 +5,28 @@ import csv
 import calendar
 from datetime import datetime
 from collections import defaultdict
+from django.db import transaction
 from django.db import connections
 from django.db.utils import OperationalError
 from django.utils import timezone
+from django.utils.html import strip_tags
 from django.http import HttpResponse
-from django.db.models import Count, Sum
+from django.db.models import Count, Sum, Q
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets
-from .models import College, Department
+from rest_framework.decorators import action
+from .models import College, Department, SystemNotification, NotificationReadState
 from .serializers import SystemStatsResponseSerializer, HealthCheckResponseSerializer
 from .serializers import CollegeSerializer, DepartmentSerializer
 from .serializers import AnalyticsDashboardResponseSerializer
+from .serializers import SystemNotificationSerializer, NotificationItemSerializer
 from analytics.permissions import HasAnalyticsPermission
 from users.models import User
+from announcements.models import Announcement
 from clubs.models import Club
 from events.models import Event
 from bookings.models import Booking
@@ -54,6 +59,168 @@ class DepartmentViewSet(viewsets.ModelViewSet):
         if self.request.method in permissions.SAFE_METHODS:
             return [permissions.AllowAny()]
         return [permissions.IsAdminUser()]
+
+
+@extend_schema(tags=['Notifications'])
+class SystemNotificationViewSet(viewsets.ModelViewSet):
+    """
+    System notifications for authenticated users and admin management.
+    """
+
+    queryset = SystemNotification.objects.filter(is_active=True).order_by('-created_at')
+
+    def get_permissions(self):
+        admin_actions = {'create', 'update', 'partial_update', 'destroy'}
+        if self.action in admin_actions:
+            return [permissions.IsAdminUser()]
+        return [permissions.IsAuthenticated()]
+
+    def get_serializer_class(self):  # type: ignore[reportIncompatibleMethodOverride]
+        admin_actions = {'create', 'update', 'partial_update', 'destroy'}
+        if self.action in admin_actions:
+            return SystemNotificationSerializer
+        return NotificationItemSerializer
+
+    def _build_announcement_excerpt(self, body):
+        cleaned = strip_tags(body or '').strip()
+        if not cleaned:
+            return 'New announcement published.'
+        return f"{cleaned[:157]}..." if len(cleaned) > 160 else cleaned
+
+    def _ensure_announcement_notifications(self):
+        # Backfill notifications for published announcements so the menu always has meaningful data.
+        published = list(
+            Announcement.objects.filter(is_active=True, is_published=True)
+            .select_related('author')
+            .order_by('-created_at')[:100]
+        )
+        if not published:
+            return
+
+        hrefs = [f"/announcements/{announcement.id}" for announcement in published]
+        existing_hrefs = set(
+            SystemNotification.objects.filter(
+                notification_type=SystemNotification.NotificationType.ANNOUNCEMENT,
+                href__in=hrefs,
+            ).values_list('href', flat=True)
+        )
+
+        to_create = []
+        for announcement in published:
+            href = f"/announcements/{announcement.id}"
+            if href in existing_hrefs:
+                continue
+            to_create.append(
+                SystemNotification(
+                    title=announcement.title[:180],
+                    description=self._build_announcement_excerpt(announcement.body),
+                    notification_type=SystemNotification.NotificationType.ANNOUNCEMENT,
+                    icon_key='Megaphone',
+                    href=href,
+                    target_all_users=True,
+                    created_by=announcement.author,
+                )
+            )
+
+        if to_create:
+            SystemNotification.objects.bulk_create(to_create)
+
+    def get_queryset(self):  # type: ignore[reportIncompatibleMethodOverride]
+        if self.action in {'list', 'retrieve'}:
+            self._ensure_announcement_notifications()
+
+        queryset = (
+            SystemNotification.objects.filter(is_active=True)
+            .prefetch_related('target_roles', 'target_users')
+            .order_by('-created_at')
+        )
+
+        now = timezone.now()
+        queryset = queryset.filter(Q(expires_at__isnull=True) | Q(expires_at__gt=now))
+
+        # Use getattr to handle cases where self.request may be a plain HttpRequest
+        qp = getattr(self.request, 'query_params', getattr(self.request, 'GET', {}))
+        user = getattr(self.request, 'user', None)
+        if self.action in {'retrieve', 'list'} and getattr(user, 'is_staff', False):
+            scope = qp.get('scope')
+            if scope == 'admin':
+                return queryset
+
+        return queryset.filter(
+            Q(target_all_users=True) |
+            Q(target_users=user) |
+            Q(target_roles__users=user)
+        ).distinct()
+
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        if self.action in {'list', 'retrieve'}:
+            read_ids = set(
+                NotificationReadState.objects.filter(user=self.request.user).values_list('notification_id', flat=True)
+            )
+            context['read_ids'] = read_ids
+        return context
+
+    @extend_schema(
+        responses={200: OpenApiTypes.OBJECT},
+    )
+    @action(detail=True, methods=['post'], url_path='read')
+    def mark_read(self, request, pk=None):
+        notification = self.get_object()
+        NotificationReadState.objects.get_or_create(notification=notification, user=request.user)
+        return Response(
+            {
+                'success': True,
+                'message': 'Notification marked as read.',
+                'data': {'id': str(notification.id), 'read': True},
+                'statusCode': 200,
+                'error': None,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+    @extend_schema(
+        responses={200: OpenApiTypes.OBJECT},
+    )
+    @action(detail=False, methods=['post'], url_path='mark-all-read')
+    def mark_all_read(self, request):
+        notifications = self.get_queryset().values_list('id', flat=True)
+        already_read_ids = set(
+            NotificationReadState.objects.filter(
+                user=request.user,
+                notification_id__in=notifications,
+            ).values_list('notification_id', flat=True)
+        )
+
+        unread_ids = [notification_id for notification_id in notifications if notification_id not in already_read_ids]
+        now = timezone.now()
+
+        with transaction.atomic():
+            NotificationReadState.objects.bulk_create(
+                [
+                    NotificationReadState(
+                        notification_id=notification_id,
+                        user=request.user,
+                        read_at=now,
+                    )
+                    for notification_id in unread_ids
+                ],
+                ignore_conflicts=True,
+            )
+
+        return Response(
+            {
+                'success': True,
+                'message': 'All notifications marked as read.',
+                'data': {'count': len(unread_ids)},
+                'statusCode': 200,
+                'error': None,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class AnalyticsDashboardView(APIView):
@@ -572,6 +739,7 @@ class SystemStatsView(APIView):
             "error": None
         })
 
+@extend_schema(tags=['Core'])
 class HealthCheckView(APIView):
     """
     Quick health check for database and core components.

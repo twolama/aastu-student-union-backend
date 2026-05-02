@@ -52,6 +52,8 @@ INSTALLED_APPS = [
     'django_filters',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
+    'cloudinary',
+    'cloudinary_storage',
 
 
     # Local apps
@@ -102,10 +104,22 @@ WSGI_APPLICATION = 'aastu_su_backend.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+# SQLite configuration is kept for reference only.
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('DATABASE_NAME', 'aastu_su'),
+        'USER': os.getenv('DATABASE_USER', 'postgres'),
+        'PASSWORD': os.getenv('DATABASE_PASSWORD', ''),
+        'HOST': os.getenv('DATABASE_HOST', 'localhost'),
+        'PORT': os.getenv('DATABASE_PORT', '5432'),
     }
 }
 
@@ -158,6 +172,15 @@ STATIC_ROOT = BASE_DIR / 'static'
 # Media files Configuration
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+CLOUDINARY_URL = os.getenv('CLOUDINARY_URL', '')
+if CLOUDINARY_URL:
+    DEFAULT_FILE_STORAGE = 'core.custom_storage.CloudinaryStorage'
+    from core.custom_storage import CloudinaryStorage
+    import django.core.files.storage
+    django.core.files.storage.default_storage = CloudinaryStorage()
+else:
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
 
 # Email Configuration
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND') or (

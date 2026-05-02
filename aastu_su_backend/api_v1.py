@@ -21,6 +21,7 @@ from core.views import (
     HealthCheckView,
     CollegeViewSet,
     DepartmentViewSet,
+    SystemNotificationViewSet,
     AnalyticsDashboardView,
     AnalyticsReportExportView,
 )
@@ -41,6 +42,7 @@ router.register(r'users', UserViewSet)
 router.register(r'roles', RoleViewSet)
 router.register(r'colleges', CollegeViewSet)
 router.register(r'departments', DepartmentViewSet)
+router.register(r'notifications', SystemNotificationViewSet, basename='notification')
 router.register(r'venues', VenueViewSet)
 router.register(r'venue-categories', VenueCategoryViewSet)
 router.register(r'venue-gallery', VenueImageViewSet)

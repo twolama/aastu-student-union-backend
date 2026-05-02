@@ -1,5 +1,11 @@
 from rest_framework import serializers
-from .models import College, Department
+from django.utils import timezone
+from django.contrib.auth import get_user_model
+from users.models import Role
+from .models import College, Department, SystemNotification
+
+
+User = get_user_model()
 
 class CollegeMinimalSerializer(serializers.ModelSerializer):
     class Meta:
@@ -19,6 +25,104 @@ class DepartmentSerializer(serializers.ModelSerializer):
         model = Department
         fields = ('id', 'name', 'slug', 'college', 'college_details')
         read_only_fields = ('college_details',)
+
+
+class SystemNotificationSerializer(serializers.ModelSerializer):
+    target_roles = serializers.PrimaryKeyRelatedField(
+        queryset=Role.objects.filter(is_active=True),
+        many=True,
+        required=False,
+    )
+    target_users = serializers.PrimaryKeyRelatedField(
+        queryset=User.objects.filter(is_active=True),
+        many=True,
+        required=False,
+    )
+    created_by = serializers.UUIDField(read_only=True)
+
+    class Meta:
+        model = SystemNotification
+        fields = (
+            'id',
+            'title',
+            'description',
+            'notification_type',
+            'icon_key',
+            'href',
+            'target_all_users',
+            'target_roles',
+            'target_users',
+            'created_by',
+            'expires_at',
+            'is_active',
+            'created_at',
+            'updated_at',
+        )
+        read_only_fields = ('id', 'created_at', 'updated_at', 'created_by')
+
+    def validate(self, attrs):
+        attrs = super().validate(attrs)
+        target_all_users = attrs.get('target_all_users', getattr(self.instance, 'target_all_users', False))
+        target_roles = attrs.get('target_roles')
+        target_users = attrs.get('target_users')
+
+        if target_roles is None and self.instance is not None:
+            target_roles = self.instance.target_roles.all()
+        if target_users is None and self.instance is not None:
+            target_users = self.instance.target_users.all()
+
+        if not target_all_users and not target_roles and not target_users:
+            raise serializers.ValidationError(
+                'At least one audience target is required: target_all_users, target_roles, or target_users.'
+            )
+        return attrs
+
+
+class NotificationItemSerializer(serializers.ModelSerializer):
+    unread = serializers.SerializerMethodField()
+    time_label = serializers.SerializerMethodField()
+
+    class Meta:
+        model = SystemNotification
+        fields = (
+            'id',
+            'title',
+            'description',
+            'notification_type',
+            'icon_key',
+            'href',
+            'unread',
+            'time_label',
+            'created_at',
+        )
+
+    def get_unread(self, obj):
+        read_ids = self.context.get('read_ids', set())
+        return obj.id not in read_ids
+
+    def get_time_label(self, obj):
+        dt = obj.created_at
+        now = timezone.now()
+        delta = now - dt
+        minutes = int(delta.total_seconds() // 60)
+
+        if minutes < 1:
+            return 'Just now'
+        if minutes < 60:
+            return f"{minutes} min ago"
+
+        hours = int(delta.total_seconds() // 3600)
+        if hours < 24:
+            return f"{hours} hour ago" if hours == 1 else f"{hours} hours ago"
+
+        if (now.date() - dt.date()).days == 1:
+            return 'Yesterday'
+
+        return dt.strftime('%b %d')
+
+
+class MarkNotificationReadSerializer(serializers.Serializer):
+    pass
 
 
 class AnalyticsStatCardSerializer(serializers.Serializer):

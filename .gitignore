@@ -163,3 +163,4 @@ OldLMSAPI.json
 lms_project/chroma_db/
 
 Rules/
+.env
