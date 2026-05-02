@@ -12,10 +12,12 @@ django-jazzmin==3.0.4
 djangorestframework==3.17.1
 djangorestframework_simplejwt==5.5.1
 drf-spectacular==0.29.0
+gunicorn==25.3.0
 idna==3.13
 inflection==0.5.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
+packaging==26.2
 pillow==12.2.0
 psutil==7.2.2
 psycopg2-binary==2.9.11
