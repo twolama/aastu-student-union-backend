@@ -340,6 +340,9 @@ CORS_ALLOWED_ORIGINS = [
     "http://127.0.0.1:3000",
 ]   
 
+# Add production frontend origin for CORS
+CORS_ALLOWED_ORIGINS.append("https://aastu-student-union-web.vercel.app")
+
 # Simple JWT Configuration
 from datetime import timedelta
 SIMPLE_JWT = {
@@ -350,7 +353,8 @@ SIMPLE_JWT = {
     'UPDATE_LAST_LOGIN': False,
 
     'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
+    # Allow explicit JWT signing key via env var; fall back to Django SECRET_KEY
+    'SIGNING_KEY': os.getenv('SIMPLE_JWT_SIGNING_KEY', SECRET_KEY),
     'VERIFYING_KEY': None,
     'AUDIENCE': None,
     'ISSUER': None,
@@ -371,6 +375,17 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=60),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
+
+# Warn if the JWT signing key is suspiciously short — do not raise here to avoid
+# breaking startup, but surface an obvious warning for operators.
+import warnings
+_jwt_key = SIMPLE_JWT.get('SIGNING_KEY')
+try:
+    if _jwt_key and len(_jwt_key) < 32:
+        warnings.warn('SIMPLE_JWT SIGNING_KEY is shorter than 32 characters — rotate to a stronger key.', RuntimeWarning)
+except Exception:
+    # defensive: do not allow settings import to fail
+    pass
 
 # Jazzmin Configuration
 JAZZMIN_SETTINGS = {
