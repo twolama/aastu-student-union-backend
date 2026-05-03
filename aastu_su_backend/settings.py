@@ -225,7 +225,7 @@ MEDIA_ROOT = BASE_DIR / 'media'
 CLOUDINARY_URL = os.getenv('CLOUDINARY_URL', '')
 STORAGES = {
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        'BACKEND': 'whitenoise.storage.CompressedStaticFilesStorage',
     },
     'default': {
         'BACKEND': (
