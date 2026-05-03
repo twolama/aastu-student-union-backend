@@ -8,6 +8,7 @@ from rest_framework_simplejwt.settings import api_settings as jwt_settings
 import threading
 import secrets
 import logging
+import time
 from datetime import datetime, timedelta
 from typing import Any, Dict, cast
 from django.db.models.query import QuerySet
@@ -33,6 +34,13 @@ logger = logging.getLogger(__name__)
 
 
 def _send_user_invitation_email(user_id: str, recipient_email: str, recipient_name: str, temporary_password: str) -> None:
+    if not recipient_email:
+        logger.warning(
+            "Skipping invitation email because recipient email is empty",
+            extra={"user_id": user_id},
+        )
+        return
+
     subject = "Welcome to AASTU Student Union Portal"
     message = (
         f"Hello {recipient_name},\n\n"
@@ -43,19 +51,29 @@ def _send_user_invitation_email(user_id: str, recipient_email: str, recipient_na
         "Welcome aboard!"
     )
 
-    try:
-        send_mail(
-            subject,
-            message,
-            settings.DEFAULT_FROM_EMAIL,
-            [recipient_email],
-            fail_silently=False,
-        )
-    except Exception:
-        logger.exception(
-            "Failed to send invitation email for newly created user",
-            extra={"user_id": user_id, "email": recipient_email},
-        )
+    # Retry a few times to survive transient SMTP/network hiccups.
+    max_attempts = 3
+    for attempt in range(1, max_attempts + 1):
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [recipient_email],
+                fail_silently=False,
+            )
+            logger.info(
+                "Invitation email sent",
+                extra={"user_id": user_id, "email": recipient_email, "attempt": attempt},
+            )
+            return
+        except Exception:
+            logger.exception(
+                "Failed to send invitation email for newly created user",
+                extra={"user_id": user_id, "email": recipient_email, "attempt": attempt},
+            )
+            if attempt < max_attempts:
+                time.sleep(1.5 * attempt)
 
 
 class RoleViewSet(viewsets.ModelViewSet):
@@ -376,7 +394,7 @@ class UserViewSet(viewsets.ModelViewSet):
                 thread = threading.Thread(
                     target=_send_user_invitation_email,
                     args=(str(user.pk), user.email, user.name, temp_password),
-                    daemon=True,
+                    daemon=False,
                 )
                 thread.start()
 
