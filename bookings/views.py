@@ -7,6 +7,7 @@ from .models import Booking
 from .serializers import BookingSerializer, BookingListSerializer, BookingDetailSerializer
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
 from drf_spectacular.types import OpenApiTypes
+from clubs.permissions import can_manage_club, get_managed_clubs, has_club_management_scope
 
 class BookingViewSet(viewsets.ModelViewSet):
     """
@@ -32,11 +33,17 @@ class BookingViewSet(viewsets.ModelViewSet):
             return queryset.none()
 
         role_slugs = set(user.roles.values_list('slug', flat=True))
+        managed_clubs = get_managed_clubs(user)
+
+        if has_club_management_scope(user):
+            queryset = queryset.filter(club__in=managed_clubs)
+        elif 'general-student' in role_slugs:
+            queryset = queryset.filter(requester=user)
+        else:
+            return queryset.none()
         
         # Students should only see their own requests or their club's requests
-        if 'general-student' in role_slugs:
-            queryset = queryset.filter(requester=user)
-        elif 'club-president' in role_slugs:
+        if 'club-president' in role_slugs and not has_club_management_scope(user):
             queryset = queryset.filter(Q(requester=user) | Q(club__president=user))
              
         # Common filters
@@ -62,11 +69,17 @@ class BookingViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         if not self.request.user.has_perm('bookings.add_booking'):
             raise PermissionDenied('You do not have permission to create bookings.')
+        club = serializer.validated_data.get('club')
+        if has_club_management_scope(self.request.user) and not can_manage_club(self.request.user, club):
+            raise PermissionDenied('You do not have permission to create bookings for this club.')
         serializer.save(requester=self.request.user)
 
     def perform_update(self, serializer):
         if not self.request.user.has_perm('bookings.change_booking'):
             raise PermissionDenied('You do not have permission to edit bookings.')
+        club = serializer.validated_data.get('club', serializer.instance.club)
+        if has_club_management_scope(self.request.user) and not can_manage_club(self.request.user, club):
+            raise PermissionDenied('You do not have permission to edit bookings for this club.')
         serializer.save()
 
     def perform_destroy(self, instance):

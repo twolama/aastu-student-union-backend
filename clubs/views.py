@@ -3,6 +3,7 @@ from rest_framework.exceptions import PermissionDenied
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from .models import Club, ClubCategory
+from .permissions import get_managed_clubs, can_manage_club, has_club_management_scope
 from .serializers import (
     ClubSerializer,
     ClubListSerializer,
@@ -41,6 +42,12 @@ class ClubViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        user = self.request.user
+
+        if has_club_management_scope(user):
+            managed_clubs = get_managed_clubs(user)
+            queryset = queryset.filter(pk__in=managed_clubs.values('pk'))
+
         status_param = self.request.query_params.get('status')
         category = self.request.query_params.get('category')
         if status_param:
@@ -57,11 +64,15 @@ class ClubViewSet(viewsets.ModelViewSet):
     def perform_update(self, serializer):
         if not self.request.user.has_perm('clubs.change_club'):
             raise PermissionDenied('You do not have permission to edit clubs.')
+        if has_club_management_scope(self.request.user) and not can_manage_club(self.request.user, serializer.instance):
+            raise PermissionDenied('You do not have permission to manage this club.')
         serializer.save()
 
     def perform_destroy(self, instance):
         if not self.request.user.has_perm('clubs.delete_club'):
             raise PermissionDenied('You do not have permission to delete clubs.')
+        if has_club_management_scope(self.request.user) and not can_manage_club(self.request.user, instance):
+            raise PermissionDenied('You do not have permission to manage this club.')
         instance.delete()
 
     @action(detail=True, methods=['get'], url_path='upcoming-events')
