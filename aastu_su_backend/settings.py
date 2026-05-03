@@ -31,6 +31,9 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-7x3@n69x+2bnm*6e%ely)hq7s^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
+# Allow explicitly enabling API documentation in non-debug environments
+SERVE_API_DOCS = os.getenv('SERVE_API_DOCS', 'False') == 'True'
+
 _default_allowed_hosts = [
     'localhost',
     '127.0.0.1',

@@ -31,10 +31,10 @@ urlpatterns = [
     path('api/v1/', include('aastu_su_backend.api_v1')),
 ]
 
-if settings.DEBUG:
+if settings.DEBUG or getattr(settings, 'SERVE_API_DOCS', False):
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
-    
+
     # API Documentation (Swagger/Redoc)
     urlpatterns += [
         path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
