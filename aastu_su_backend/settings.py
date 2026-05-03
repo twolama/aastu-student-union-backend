@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 import os
 from pathlib import Path
+from urllib.parse import parse_qs, unquote, urlparse
 from dotenv import load_dotenv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -125,15 +126,44 @@ WSGI_APPLICATION = 'aastu_su_backend.wsgi.application'
 #     }
 # }
 
-DATABASES = {
-    'default': {
+def _build_database_config():
+    database_url = os.getenv('DATABASE_URL', '').strip()
+    if database_url:
+        parsed = urlparse(database_url)
+        if parsed.scheme in {'postgres', 'postgresql'}:
+            query_params = parse_qs(parsed.query)
+            sslmode = query_params.get('sslmode', [''])[0].strip() or os.getenv('DATABASE_SSLMODE', '').strip()
+            config: dict[str, object] = {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': unquote(parsed.path.lstrip('/')),
+                'USER': unquote(parsed.username or ''),
+                'PASSWORD': unquote(parsed.password or ''),
+                'HOST': parsed.hostname or 'localhost',
+                'PORT': str(parsed.port or '5432'),
+            }
+            if sslmode:
+                config['OPTIONS'] = {'sslmode': sslmode}
+            return config
+
+    host = os.getenv('DATABASE_HOST', 'localhost')
+    default_sslmode = 'require' if host not in {'localhost', '127.0.0.1', ''} else ''
+    sslmode = os.getenv('DATABASE_SSLMODE', default_sslmode).strip()
+
+    config: dict[str, object] = {
         'ENGINE': 'django.db.backends.postgresql',
         'NAME': os.getenv('DATABASE_NAME', 'aastu_su'),
         'USER': os.getenv('DATABASE_USER', 'postgres'),
         'PASSWORD': os.getenv('DATABASE_PASSWORD', ''),
-        'HOST': os.getenv('DATABASE_HOST', 'localhost'),
+        'HOST': host,
         'PORT': os.getenv('DATABASE_PORT', '5432'),
     }
+    if sslmode:
+        config['OPTIONS'] = {'sslmode': sslmode}
+    return config
+
+
+DATABASES = {
+    'default': _build_database_config(),
 }
 
 # Custom User Model
