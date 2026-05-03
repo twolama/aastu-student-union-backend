@@ -1,0 +1,13 @@
+Hello {{ recipient_name }},
+
+An account has been created for you on the AASTU Student Union Portal.
+
+Your temporary password is: {{ temporary_password }}
+
+Sign in here: {{ login_url }}
+
+Use this password to log in, then change it immediately after your first sign in.
+
+If you did not expect this email, please contact support at {{ support_email }}.
+
+Welcome aboard!

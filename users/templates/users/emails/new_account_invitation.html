@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome to AASTU Student Union</title>
+  </head>
+  <body style="margin:0;padding:0;background-color:{{ brand_bg }};font-family:Arial,Helvetica,sans-serif;color:{{ brand_text_dark }};">
+    <div style="max-width:640px;margin:0 auto;padding:32px 16px;">
+      <div style="background-color:{{ brand_card }};border:1px solid {{ brand_border }};border-radius:24px;overflow:hidden;box-shadow:0 20px 60px -40px rgba(20,33,61,0.45);">
+        <div style="padding:28px 28px 20px;background:linear-gradient(135deg, {{ brand_dark }}, #1d2f57);text-align:center;">
+          <img src="{{ logo_url }}" alt="AASTU Student Union" style="display:block;width:72px;height:72px;object-fit:contain;margin:0 auto 14px;border-radius:16px;background:rgba(255,255,255,0.08);padding:10px;" />
+          <div style="display:inline-block;border:1px solid rgba(255,255,255,0.18);border-radius:999px;padding:6px 12px;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;color:rgba(255,255,255,0.9);">
+            AASTU Student Union
+          </div>
+          <h1 style="margin:18px 0 0;font-size:30px;line-height:1.15;color:#ffffff;">Your account is ready</h1>
+        </div>
+
+        <div style="padding:32px 28px 28px;">
+          <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:{{ brand_text }};">Hello <strong style="color:{{ brand_text_dark }};">{{ recipient_name }}</strong>,</p>
+          <p style="margin:0 0 14px;font-size:16px;line-height:1.7;color:{{ brand_text }};">An account has been created for you on the AASTU Student Union Portal.</p>
+          <p style="margin:0 0 10px;font-size:16px;line-height:1.7;color:{{ brand_text }};">Your temporary password is:</p>
+
+          <div style="margin:14px 0 22px;padding:16px 18px;border:1px dashed {{ brand_primary }};border-radius:16px;background:{{ brand_bg }};font-size:18px;font-weight:700;letter-spacing:0.06em;color:{{ brand_dark }};text-align:center;word-break:break-all;">
+            {{ temporary_password }}
+          </div>
+
+          <p style="margin:0 0 20px;font-size:16px;line-height:1.7;color:{{ brand_text }};">Use this password to sign in, then change it immediately after your first login.</p>
+
+          <div style="text-align:center;margin:28px 0 10px;">
+            <a href="{{ login_url }}" style="display:inline-block;background-color:{{ brand_primary }};color:#ffffff;text-decoration:none;font-weight:700;font-size:15px;padding:14px 24px;border-radius:12px;box-shadow:0 12px 24px -14px rgba(196,154,34,0.9);">
+              Sign in to your account
+            </a>
+          </div>
+
+          <p style="margin:18px 0 0;font-size:13px;line-height:1.6;color:{{ brand_text }};text-align:center;">
+            Need help? Contact <a href="mailto:{{ support_email }}" style="color:{{ brand_primary_dark }};text-decoration:none;font-weight:700;">{{ support_email }}</a>.
+          </p>
+        </div>
+      </div>
+
+      <p style="margin:18px 0 0;text-align:center;font-size:12px;line-height:1.6;color:#7a8496;">
+        &copy; {{ current_year }} AASTU Student Union. All rights reserved.
+      </p>
+    </div>
+  </body>
+</html>

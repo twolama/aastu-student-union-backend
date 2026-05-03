@@ -17,8 +17,9 @@ from rest_framework.request import Request
 from urllib.parse import quote_plus
 from django.utils import timezone
 from django.contrib.auth import get_user_model
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.conf import settings
+from django.template.loader import render_to_string
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from drf_spectacular.types import OpenApiTypes
 from .models import Role, PasswordResetOTP
@@ -42,26 +43,42 @@ def _send_user_invitation_email(user_id: str, recipient_email: str, recipient_na
         return
 
     subject = "Welcome to AASTU Student Union Portal"
-    message = (
-        f"Hello {recipient_name},\n\n"
-        "An account has been created for you on the AASTU Student Union Portal.\n\n"
-        f"Temporary password: {temporary_password}\n\n"
-        "Sign in using your username, student ID, or email with this temporary password. "
-        "You will be required to change it immediately after login.\n\n"
-        "Welcome aboard!"
-    )
+    base_frontend_url = settings.FRONTEND_URL.rstrip('/')
+    context = {
+        'recipient_name': recipient_name or 'Student',
+        'temporary_password': temporary_password,
+        'login_url': f'{base_frontend_url}/login',
+        'logo_url': f'{base_frontend_url}/aastu_logo.jpg',
+        'brand_primary': '#c49a22',
+        'brand_primary_dark': '#a67f18',
+        'brand_dark': '#14213d',
+        'brand_bg': '#f7f8fc',
+        'brand_card': '#ffffff',
+        'brand_border': '#e7ebf3',
+        'brand_text': '#51607e',
+        'brand_text_dark': '#14213d',
+        'brand_button_hover': '#1d2f57',
+        'support_email': settings.DEFAULT_FROM_EMAIL,
+        'current_year': timezone.now().year,
+    }
+
+    text_message = render_to_string('users/emails/new_account_invitation.txt', context)
+    html_message = render_to_string('users/emails/new_account_invitation.html', context)
+
+    from_email = settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL
 
     # Retry a few times to survive transient SMTP/network hiccups.
     max_attempts = 3
     for attempt in range(1, max_attempts + 1):
         try:
-            send_mail(
+            email_message = EmailMultiAlternatives(
                 subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
+                text_message,
+                from_email,
                 [recipient_email],
-                fail_silently=False,
             )
+            email_message.attach_alternative(html_message, 'text/html')
+            email_message.send(fail_silently=False)
             logger.info(
                 "Invitation email sent",
                 extra={"user_id": user_id, "email": recipient_email, "attempt": attempt},
