@@ -2,6 +2,7 @@ from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
 import threading
@@ -380,6 +381,13 @@ class UserViewSet(viewsets.ModelViewSet):
                 thread.start()
 
             transaction.on_commit(dispatch_invitation_email)
+
+    def perform_destroy(self, instance):
+        if instance.is_superuser:
+            raise PermissionDenied('Superuser accounts cannot be deleted.')
+        if instance.pk == self.request.user.pk and self.request.user.is_superuser:
+            raise PermissionDenied('Superuser accounts cannot be deleted.')
+        instance.delete()
 
     def get_queryset(self) -> Any:
         queryset = self.queryset
