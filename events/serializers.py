@@ -2,9 +2,10 @@ from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from .models import Event, EventVolunteer
 from bookings.models import Booking
+from bookings.serializers import BookingDetailSerializer
 from users.serializers import UserMinimalSerializer
 from clubs.serializers import ClubMinimalSerializer
-from venues.serializers import VenueSerializer
+from venues.serializers import VenueSerializer, VenueDetailSerializer
 from clubs.models import Club
 
 def flatten_logistics_data(val):
@@ -75,14 +76,25 @@ class EventDetailSerializer(EventListSerializer):
     """
     attendees = UserMinimalSerializer(many=True, read_only=True)
     volunteers = EventVolunteerSerializer(many=True, read_only=True)
+    venue_details = VenueDetailSerializer(source='venue', read_only=True)
+    booking_details = BookingDetailSerializer(source='booking', read_only=True)
 
     class Meta(EventListSerializer.Meta):
         fields = EventListSerializer.Meta.fields + (
-            'description', 'logistics', 'attendance', 'attendees', 'volunteers'
+            'description', 'logistics', 'attendance', 'attendees', 'volunteers', 'venue_details', 'booking_details'
         )
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
+        booking = getattr(instance, 'booking', None)
+
+        if booking and not data.get('venue_details') and getattr(booking, 'venue', None):
+            data['venue_details'] = VenueDetailSerializer(booking.venue, context=self.context).data
+            if not data.get('venue'):
+                data['venue'] = str(booking.venue)
+            if not data.get('physical_location_details') and getattr(booking.venue, 'location', None):
+                data['physical_location_details'] = booking.venue.location
+
         if 'logistics' in data and data['logistics']:
             data['logistics'] = flatten_logistics_data(data['logistics'])
         return data

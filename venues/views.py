@@ -52,6 +52,10 @@ class VenueViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         queryset = super().get_queryset()
+        category = self.request.query_params.get('category__slug')
+        if category:
+            queryset = queryset.filter(category__slug=category)
+
         status = self.request.query_params.get('status')
         if status:
             queryset = queryset.filter(status=status)

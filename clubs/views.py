@@ -44,12 +44,12 @@ class ClubViewSet(viewsets.ModelViewSet):
         queryset = super().get_queryset()
         user = self.request.user
 
-        if has_club_management_scope(user):
+        if self.action != 'list' and has_club_management_scope(user):
             managed_clubs = get_managed_clubs(user)
             queryset = queryset.filter(pk__in=managed_clubs.values('pk'))
 
         status_param = self.request.query_params.get('status')
-        category = self.request.query_params.get('category')
+        category = self.request.query_params.get('category') or self.request.query_params.get('category__slug')
         if status_param:
             queryset = queryset.filter(status=status_param)
         if category:

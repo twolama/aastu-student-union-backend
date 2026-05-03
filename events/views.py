@@ -14,7 +14,14 @@ class EventViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows events to be viewed or edited.
     """
-    queryset = Event.objects.filter(is_active=True).select_related('organizing_club', 'venue').prefetch_related('attendees', 'volunteers')
+    queryset = Event.objects.filter(is_active=True).select_related(
+        'organizing_club',
+        'venue',
+        'venue__category',
+        'booking',
+        'booking__venue',
+        'booking__venue__category',
+    ).prefetch_related('attendees', 'volunteers', 'venue__gallery', 'booking__venue__gallery')
     serializer_class = EventSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
 
