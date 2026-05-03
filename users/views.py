@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import action
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.settings import api_settings as jwt_settings
+import threading
 import secrets
 import logging
 from datetime import datetime, timedelta
@@ -28,6 +29,32 @@ from .serializers import (
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
+
+
+def _send_user_invitation_email(user_id: str, recipient_email: str, recipient_name: str, temporary_password: str) -> None:
+    subject = "Welcome to AASTU Student Union Portal"
+    message = (
+        f"Hello {recipient_name},\n\n"
+        "An account has been created for you on the AASTU Student Union Portal.\n\n"
+        f"Temporary password: {temporary_password}\n\n"
+        "Sign in using your username, student ID, or email with this temporary password. "
+        "You will be required to change it immediately after login.\n\n"
+        "Welcome aboard!"
+    )
+
+    try:
+        send_mail(
+            subject,
+            message,
+            settings.DEFAULT_FROM_EMAIL,
+            [recipient_email],
+            fail_silently=False,
+        )
+    except Exception:
+        logger.exception(
+            "Failed to send invitation email for newly created user",
+            extra={"user_id": user_id, "email": recipient_email},
+        )
 
 
 class RoleViewSet(viewsets.ModelViewSet):
@@ -344,31 +371,15 @@ class UserViewSet(viewsets.ModelViewSet):
             user.must_change_password = True
             user.save(update_fields=['password', 'must_change_password'])
 
-            subject = "Welcome to AASTU Student Union Portal"
-            message = (
-                f"Hello {user.name},\n\n"
-                "An account has been created for you on the AASTU Student Union Portal.\n\n"
-                f"Temporary password: {temp_password}\n\n"
-                "Sign in using your username, student ID, or email with this temporary password. "
-                "You will be required to change it immediately after login.\n\n"
-                "Welcome aboard!"
-            )
-
-            try:
-                send_mail(
-                    subject,
-                    message,
-                    settings.DEFAULT_FROM_EMAIL,
-                    [user.email],
-                    fail_silently=False,
+            def dispatch_invitation_email() -> None:
+                thread = threading.Thread(
+                    target=_send_user_invitation_email,
+                    args=(str(user.pk), user.email, user.name, temp_password),
+                    daemon=True,
                 )
-            except Exception:
-                logger.exception("Failed to send invitation email for newly created user", extra={"user_id": str(user.pk), "email": user.email})
-                raise serializers.ValidationError({
-                    "email": [
-                        "Temporary password email could not be sent. User account was not created."
-                    ]
-                })
+                thread.start()
+
+            transaction.on_commit(dispatch_invitation_email)
 
     def get_queryset(self) -> Any:
         queryset = self.queryset

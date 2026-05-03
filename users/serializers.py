@@ -1,6 +1,7 @@
 from rest_framework import serializers
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
+from typing import Any, cast
 from .models import Role
 from .permissions import permissions_to_frontend_keys
 from core.serializers import DepartmentSerializer, CollegeMinimalSerializer
@@ -115,7 +116,10 @@ class UserSerializer(serializers.ModelSerializer):
             validated_data['username'] = validated_data.get('student_id') or validated_data.get('email')
 
         # Password is assigned by onboarding flow in the view layer.
-        user = User.objects.create_user(**validated_data)
+        user = cast(Any, User.objects.create_user(**validated_data))
+        member_role = Role.objects.filter(slug__iexact='member').first() or Role.objects.filter(name__iexact='member').first()
+        if member_role and member_role not in roles:
+            roles = [member_role, *roles]
         if roles:
             user.roles.set(roles)
         return user
@@ -225,5 +229,9 @@ class UserPermissionsDataSerializer(serializers.Serializer):
 class UserPermissionsResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
     message = serializers.CharField()
-    data = UserPermissionsDataSerializer()
+
+    def get_fields(self):
+        fields = super().get_fields()
+        fields['data'] = UserPermissionsDataSerializer()
+        return fields
 
