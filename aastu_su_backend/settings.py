@@ -376,7 +376,6 @@ JAZZMIN_SETTINGS = {
     # Use classic popup for related-object (+) forms to avoid compressed modal layout.
     "related_modal_active": False,
     "use_google_fonts_cdn": True,
-    "show_ui_builder": False,
     "changeform_format": "horizontal_tabs",
 }
 
@@ -402,7 +401,7 @@ JAZZMIN_UI_TWEAKS = {
     "sidebar_link_nav_legacy_style": False,
     "sidebar_link_nav_flat_style": False,
     "theme": "default",
-    "dark_mode_theme": None,
+    "default_theme_mode": "auto",
     "button_classes": {
         "primary": "btn-outline-primary",
         "secondary": "btn-outline-secondary",
