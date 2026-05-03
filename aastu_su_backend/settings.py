@@ -30,10 +30,19 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-7x3@n69x+2bnm*6e%ely)hq7s^
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.getenv(
-    'ALLOWED_HOSTS',
-    'localhost,127.0.0.1,.onrender.com,aastu-student-union-web.vercel.app'
-).split(',')
+_default_allowed_hosts = [
+    'localhost',
+    '127.0.0.1',
+    '.onrender.com',
+    'aastu-student-union-web.vercel.app',
+    'aastu-student-union-backend.onrender.com',
+]
+_configured_allowed_hosts = [
+    host.strip()
+    for host in os.getenv('ALLOWED_HOSTS', '').split(',')
+    if host.strip()
+]
+ALLOWED_HOSTS = sorted(set(_default_allowed_hosts + _configured_allowed_hosts))
 
 
 # Application definition
