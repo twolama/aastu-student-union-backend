@@ -125,8 +125,10 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                 "error": error_message
             }, status=status.HTTP_401_UNAUTHORIZED)
 
-        user = serializer.user
+        user = User.objects.select_related('department').prefetch_related('roles__groups__permissions__content_type').get(pk=serializer.user.pk)
         tokens = cast(Dict[str, Any], serializer.validated_data)
+        django_permissions = sorted(user.get_all_permissions())
+        frontend_permissions = permissions_to_frontend_keys(django_permissions)
         
         # Calculate expiry dates
         access_expiry = timezone.now() + jwt_settings.ACCESS_TOKEN_LIFETIME
@@ -143,8 +145,8 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     "studentId": user.student_id,
                     "role": user.role.slug if user.role else None,
                     "roles": [role.slug for role in user.roles.all()],
-                    "permissions": permissions_to_frontend_keys(user.get_all_permissions()),
-                    "djangoPermissions": sorted(user.get_all_permissions()),
+                    "permissions": frontend_permissions,
+                    "djangoPermissions": django_permissions,
                     "email": user.email,
                     "mustChangePassword": user.must_change_password,
                     "registrationDate": user.date_joined.isoformat(),
@@ -376,7 +378,7 @@ class UserViewSet(viewsets.ModelViewSet):
     """
     API endpoint that allows users to be viewed or edited.
     """
-    queryset = User.objects.filter(is_active=True)
+    queryset = User.objects.filter(is_active=True).select_related('department').prefetch_related('roles__groups__permissions__content_type')
     serializer_class = UserSerializer
     permission_classes = [permissions.IsAuthenticated]
 

@@ -105,24 +105,56 @@ class User(SoftDeleteModel, AbstractUser):
         self.groups.set(manual_groups.union(role_groups))
 
     def _get_role_permission_codenames(self) -> set[str]:
-        role_permissions = set(
-            Permission.objects.filter(group__role_profiles__users=self).values_list('content_type__app_label', 'codename').distinct()
-        )
-        codenames = {f'{app_label}.{codename}' for app_label, codename in role_permissions}
+        cached_permissions = getattr(self, '_cached_role_permission_codenames', None)
+        if cached_permissions is not None:
+            return cached_permissions
 
-        if self.roles.filter(slug__iexact='member').exists() and not codenames:
+        codenames: set[str] = set()
+        prefetched_roles = getattr(self, '_prefetched_objects_cache', {}).get('roles')
+        roles = prefetched_roles if prefetched_roles is not None else self.roles.prefetch_related('groups__permissions__content_type').all()
+
+        role_list = list(roles)
+        for role in role_list:
+            groups_cache = getattr(role, '_prefetched_objects_cache', {})
+            role_groups = groups_cache.get('groups')
+            if role_groups is None:
+                role_groups = role.groups.prefetch_related('permissions__content_type').all()
+
+            for group in role_groups:
+                permissions_cache = getattr(group, '_prefetched_objects_cache', {})
+                group_permissions = permissions_cache.get('permissions')
+                if group_permissions is None:
+                    group_permissions = group.permissions.select_related('content_type').all()
+
+                for permission in group_permissions:
+                    codenames.add(f'{permission.content_type.app_label}.{permission.codename}')
+
+        if any(role.slug.lower() == 'member' for role in role_list) and not codenames:
             codenames.update(DEFAULT_MEMBER_PERMISSION_CODENAMES)
 
+        self._cached_role_permission_codenames = codenames
         return codenames
 
     def get_all_permissions(self, obj=None):
+        cached_permissions = getattr(self, '_cached_all_permissions', None)
+        if cached_permissions is not None and obj is None:
+            return cached_permissions
+
         permissions = set(super().get_all_permissions(obj=obj))
         permissions.update(self._get_role_permission_codenames())
+        if obj is None:
+            self._cached_all_permissions = permissions
         return permissions
 
     def get_group_permissions(self, obj=None):
+        cached_permissions = getattr(self, '_cached_group_permissions', None)
+        if cached_permissions is not None and obj is None:
+            return cached_permissions
+
         permissions = set(super().get_group_permissions(obj=obj))
         permissions.update(self._get_role_permission_codenames())
+        if obj is None:
+            self._cached_group_permissions = permissions
         return permissions
 
     @property
