@@ -3,7 +3,17 @@ from django.db import models
 from django.db.models.signals import m2m_changed
 from django.dispatch import receiver
 from django.contrib.auth.models import AbstractUser, UserManager, Group
+from django.contrib.auth.models import Permission
 from core.models import SoftDeleteModel, Department
+
+
+DEFAULT_MEMBER_PERMISSION_CODENAMES = {
+    'announcements.view_announcement',
+    'clubs.view_club',
+    'events.view_event',
+    'venues.view_venue',
+    'bookings.view_booking',
+}
 
 class Role(SoftDeleteModel):
     """
@@ -93,6 +103,27 @@ class User(SoftDeleteModel, AbstractUser):
         role_groups = Group.objects.filter(role_profiles__users=self).distinct()
         manual_groups = self.groups.exclude(role_profiles__users=self).distinct()
         self.groups.set(manual_groups.union(role_groups))
+
+    def _get_role_permission_codenames(self) -> set[str]:
+        role_permissions = set(
+            Permission.objects.filter(group__role_profiles__users=self).values_list('content_type__app_label', 'codename').distinct()
+        )
+        codenames = {f'{app_label}.{codename}' for app_label, codename in role_permissions}
+
+        if self.roles.filter(slug__iexact='member').exists() and not codenames:
+            codenames.update(DEFAULT_MEMBER_PERMISSION_CODENAMES)
+
+        return codenames
+
+    def get_all_permissions(self, obj=None):
+        permissions = set(super().get_all_permissions(obj=obj))
+        permissions.update(self._get_role_permission_codenames())
+        return permissions
+
+    def get_group_permissions(self, obj=None):
+        permissions = set(super().get_group_permissions(obj=obj))
+        permissions.update(self._get_role_permission_codenames())
+        return permissions
 
     @property
     def role(self) -> Role | None:
