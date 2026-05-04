@@ -16,6 +16,26 @@ class AnnouncementCategoryViewSet(viewsets.ModelViewSet):
     queryset = AnnouncementCategory.objects.filter(is_active=True).order_by('name')
     serializer_class = AnnouncementCategorySerializer
 
+    @staticmethod
+    def _as_bool(value: str | None) -> bool:
+        if value is None:
+            return False
+        return value.strip().lower() in {'1', 'true', 'yes', 'on'}
+
+    def get_queryset(self):  # type: ignore[override]
+        queryset = self.queryset
+
+        has_announcements = self._as_bool(self.request.GET.get('has_announcements'))
+        published_only = self._as_bool(self.request.GET.get('published_only'))
+
+        if has_announcements:
+            queryset = queryset.filter(announcements__is_active=True)
+            if published_only:
+                queryset = queryset.filter(announcements__is_published=True)
+            queryset = queryset.distinct()
+
+        return queryset
+
     def get_permissions(self):
         if self.request.method in permissions.SAFE_METHODS:
             return [permissions.AllowAny()]
