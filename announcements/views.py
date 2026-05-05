@@ -46,7 +46,7 @@ class AnnouncementViewSet(viewsets.ModelViewSet):
     API endpoint that allows announcements to be viewed or edited.
     Includes searching by title/tags and categorization filters.
     """
-    queryset = Announcement.objects.filter(is_active=True).select_related('author').order_by('-created_at')
+    queryset = Announcement.objects.filter(is_active=True).select_related('author', 'category').order_by('-created_at')
     serializer_class = AnnouncementSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly]
     

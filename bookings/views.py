@@ -70,6 +70,15 @@ class BookingViewSet(viewsets.ModelViewSet):
         if end_date:
             queryset = queryset.filter(end_date__lte=end_date)
             
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(requester__full_name__icontains=search) |
+                Q(requester__username__icontains=search) |
+                Q(club__name__icontains=search) |
+                Q(event_title__icontains=search)
+            )
+
         return queryset
 
     def perform_create(self, serializer):

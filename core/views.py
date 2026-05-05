@@ -3,8 +3,10 @@ import platform
 import time
 import csv
 import calendar
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
+from django.conf import settings
+from django.core.cache import cache
 from django.db import transaction
 from django.db import connections
 from django.db.utils import OperationalError
@@ -12,6 +14,7 @@ from django.utils import timezone
 from django.utils.html import strip_tags
 from django.http import HttpResponse
 from django.db.models import Count, Sum, Q
+from django.db.models.functions import ExtractMonth, ExtractYear
 from drf_spectacular.types import OpenApiTypes
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -88,6 +91,14 @@ class SystemNotificationViewSet(viewsets.ModelViewSet):
         return f"{cleaned[:157]}..." if len(cleaned) > 160 else cleaned
 
     def _ensure_announcement_notifications(self):
+        # Prevent this from running on every single request.
+        # Run at most once every hour to backfill notifications.
+        lock_cache_key = 'notifications:announcement_backfill_lock'
+        if cache.get(lock_cache_key):
+            return
+            
+        cache.set(lock_cache_key, True, timeout=3600)
+
         # Backfill notifications for published announcements so the menu always has meaningful data.
         published = list(
             Announcement.objects.filter(is_active=True, is_published=True)
@@ -246,6 +257,14 @@ class AnalyticsDashboardView(APIView):
         if period not in self.PERIOD_CHOICES:
             period = 'last-8-months'
 
+        cache_ttl = int(getattr(settings, 'ANALYTICS_DASHBOARD_CACHE_TTL', 600))
+        # Share cache across users who have the same access level
+        cache_key = f"analytics-dashboard:shared:{period}"
+        if cache_ttl > 0:
+            cached_payload = cache.get(cache_key)
+            if cached_payload is not None:
+                return Response(cached_payload, status=status.HTTP_200_OK)
+
         now = timezone.now()
         labels = self._period_labels(period, now)
 
@@ -253,11 +272,12 @@ class AnalyticsDashboardView(APIView):
         occupancy_trends = self._occupancy_trends(period, labels, now)
         club_breakdown = self._club_breakdown()
         event_distribution = self._event_distribution()
-        venue_kpis = self._venue_kpis()
+        venue_kpis = self._venue_kpis(now)
         venue_stats = self._venue_stats()
         club_stats = self._club_stats()
         recent_activity = self._recent_activity(now)
         upcoming_mega_events = self._upcoming_mega_events(request, now)
+        recent_announcements = self._recent_announcements(request)
         overview = self._overview_cards(period, now)
 
         response_data = {
@@ -272,15 +292,22 @@ class AnalyticsDashboardView(APIView):
             'club_stats': club_stats,
             'recent_activity': recent_activity,
             'upcoming_mega_events': upcoming_mega_events,
+            'recent_announcements': recent_announcements,
+            'overview': overview,
         }
 
-        return Response({
+        payload = {
             'success': True,
             'message': 'Analytics dashboard data retrieved successfully.',
             'data': response_data,
             'statusCode': 200,
             'error': None,
-        }, status=status.HTTP_200_OK)
+        }
+
+        if cache_ttl > 0:
+            cache.set(cache_key, payload, timeout=cache_ttl)
+
+        return Response(payload, status=status.HTTP_200_OK)
 
     def _period_labels(self, period, now):
         if period == 'last-8-months':
@@ -313,27 +340,23 @@ class AnalyticsDashboardView(APIView):
 
     def _registration_trends(self, period, labels, now):
         users_qs = User.objects.filter(is_active=True)
+        grouped_rows = (
+            users_qs
+            .annotate(year=ExtractYear('created_at'), month=ExtractMonth('created_at'))
+            .values('year', 'month')
+            .annotate(total=Count('id'))
+        )
+        grouped = {(row['year'], row['month']): row['total'] for row in grouped_rows}
         points = []
 
         if period == 'last-8-months':
-            grouped = {
-                (item['year'], item['month']): 0
-                for item in labels
-            }
-            for row in users_qs.values('created_at').iterator():
-                dt = row['created_at']
-                key = (dt.year, dt.month)
-                if key in grouped:
-                    grouped[key] += 1
             for item in labels:
-                points.append({'label': item['label'], 'value': grouped[(item['year'], item['month'])]})
+                value = grouped.get((item['year'], item['month']), 0)
+                points.append({'label': item['label'], 'value': value})
             return points
 
         for block in labels:
-            total = 0
-            for yy, mm in block['months']:
-                month_total = users_qs.filter(created_at__year=yy, created_at__month=mm).count()
-                total += month_total
+            total = sum(grouped.get((yy, mm), 0) for yy, mm in block['months'])
             points.append({'label': block['label'], 'value': total})
         return points
 
@@ -341,24 +364,41 @@ class AnalyticsDashboardView(APIView):
         bookings_qs = Booking.objects.filter(is_active=True).exclude(status='cancelled')
         active_venues = max(Venue.objects.filter(is_active=True).count(), 1)
 
+        # Pre-fetch all relevant bookings for the entire range to avoid N+1 queries
+        if period == 'last-8-months':
+            start_date = labels[0]['year'], labels[0]['month']
+            # We filter from the first day of the first month in labels
+            bookings_qs = bookings_qs.filter(start_date__year__gte=labels[0]['year'])
+        elif period == 'academic-year':
+            start_year = labels[0]['months'][0][0]
+            bookings_qs = bookings_qs.filter(start_date__year__gte=start_year)
+        else:
+            year = labels[0]['months'][0][0]
+            bookings_qs = bookings_qs.filter(start_date__year__gte=year)
+
+        # Load all bookings into memory for processing (only the selected_slots and date fields)
+        all_bookings = list(bookings_qs.only('selected_slots', 'start_date'))
+        
+        # Group bookings by (year, month)
+        grouped_bookings = defaultdict(list)
+        for b in all_bookings:
+            grouped_bookings[(b.start_date.year, b.start_date.month)].append(b)
+
         def month_capacity(yy, mm):
             days = calendar.monthrange(yy, mm)[1]
             # Frontend slots run 08:00-19:00 (12 hourly slots)
             return active_venues * days * 12
 
-        def month_booked_slots(yy, mm):
-            month_bookings = bookings_qs.filter(start_date__year=yy, start_date__month=mm)
-            slots = 0
-            for booking in month_bookings.only('selected_slots'):
-                slots += len(booking.selected_slots or [])
-            return slots
+        def get_total_slots(yy, mm):
+            month_list = grouped_bookings.get((yy, mm), [])
+            return sum(len(b.selected_slots or []) for b in month_list)
 
         points = []
 
         if period == 'last-8-months':
             for item in labels:
                 cap = month_capacity(item['year'], item['month'])
-                used = month_booked_slots(item['year'], item['month'])
+                used = get_total_slots(item['year'], item['month'])
                 value = round((used / cap) * 100, 2) if cap else 0
                 points.append({'label': item['label'], 'value': value})
             return points
@@ -368,7 +408,7 @@ class AnalyticsDashboardView(APIView):
             used_sum = 0
             for yy, mm in block['months']:
                 cap_sum += month_capacity(yy, mm)
-                used_sum += month_booked_slots(yy, mm)
+                used_sum += get_total_slots(yy, mm)
             value = round((used_sum / cap_sum) * 100, 2) if cap_sum else 0
             points.append({'label': block['label'], 'value': value})
         return points
@@ -402,17 +442,25 @@ class AnalyticsDashboardView(APIView):
             {'id': 'mega', 'label': 'Mega', 'value': mega, 'color': '#c49a22'},
         ]
 
-    def _venue_kpis(self):
-        rows = (
+    def _venue_kpis(self, now):
+        # Use aggregation to find the most popular venue efficiently
+        most_popular_row = (
             Booking.objects.filter(is_active=True)
             .exclude(status='cancelled')
             .values('venue__name')
             .annotate(total=Count('id'))
             .order_by('-total')
+            .first()
         )
-        most_popular = rows[0]['venue__name'] if rows else 'N/A'
+        most_popular = most_popular_row['venue__name'] if most_popular_row else 'N/A'
 
-        bookings = Booking.objects.filter(is_active=True).exclude(status='cancelled').only('selected_slots')
+        # Limit to the last 12 months for KPI calculations to maintain performance
+        cutoff_date = now.date() - timedelta(days=365)
+        bookings = (
+            Booking.objects.filter(is_active=True, start_date__gte=cutoff_date)
+            .exclude(status='cancelled')
+            .only('selected_slots')
+        )
         total_slots = 0
         count = 0
         for booking in bookings:
@@ -485,7 +533,9 @@ class AnalyticsDashboardView(APIView):
     def _recent_activity(self, now):
         activity = []
 
-        for club in Club.objects.filter(is_active=True).order_by('-created_at')[:4]:
+        # Optimization: Fetch limited fields and use single queries per category
+        clubs = Club.objects.filter(is_active=True).order_by('-created_at').only('id', 'name', 'created_at')[:4]
+        for club in clubs:
             activity.append({
                 'id': f'club-{club.id}',
                 'type': 'club',
@@ -495,7 +545,8 @@ class AnalyticsDashboardView(APIView):
                 'created_at': club.created_at,
             })
 
-        for booking in Booking.objects.filter(is_active=True, status='approved').order_by('-updated_at')[:4]:
+        bookings = Booking.objects.filter(is_active=True, status='approved').order_by('-updated_at').only('id', 'title', 'id_label', 'updated_at', 'created_at')[:4]
+        for booking in bookings:
             activity.append({
                 'id': f'approval-{booking.id}',
                 'type': 'approval',
@@ -505,7 +556,8 @@ class AnalyticsDashboardView(APIView):
                 'created_at': booking.updated_at or booking.created_at,
             })
 
-        for user in User.objects.filter(is_active=True).order_by('-created_at')[:4]:
+        users = User.objects.filter(is_active=True).order_by('-created_at').only('id', 'name', 'created_at')[:4]
+        for user in users:
             activity.append({
                 'id': f'user-{user.id}',
                 'type': 'student',
@@ -515,8 +567,9 @@ class AnalyticsDashboardView(APIView):
                 'created_at': user.created_at,
             })
 
-        for event in Event.objects.filter(is_active=True).order_by('-created_at')[:4]:
-            if event.max_capacity and event.attendees.count() >= event.max_capacity:
+        events = Event.objects.filter(is_active=True).annotate(att_count=Count('attendees')).order_by('-created_at').only('id', 'title', 'max_capacity', 'updated_at', 'created_at')[:4]
+        for event in events:
+            if event.max_capacity and event.att_count >= event.max_capacity:
                 activity.append({
                     'id': f'alert-{event.id}',
                     'type': 'alert',
@@ -526,7 +579,7 @@ class AnalyticsDashboardView(APIView):
                     'created_at': event.updated_at or event.created_at,
                 })
 
-        ordered = sorted(activity, key=lambda x: x['created_at'] or now, reverse=True)[:6]
+        ordered = sorted(activity, key=lambda x: x['created_at'] or now, reverse=True)[:5]
         for item in ordered:
             item.pop('created_at', None)
         return ordered
@@ -535,6 +588,7 @@ class AnalyticsDashboardView(APIView):
         qs = (
             Event.objects.filter(is_active=True, is_mega_event=True, start_date_time__gte=now)
             .select_related('venue')
+            .annotate(attendee_count_total=Count('attendees'))
             .prefetch_related('attendees')
             .order_by('start_date_time')[:4]
         )
@@ -547,15 +601,14 @@ class AnalyticsDashboardView(APIView):
                 cover = request.build_absolute_uri(event.cover_image.url)
 
             date_label = event.start_date_time.strftime('%b %d').upper() if event.start_date_time else 'TBD'
-            attendees = list(event.attendees.all()[:3])
+            # attendees prefetch will work for these first 3
             attendee_items = [
                 {
                     'id': str(a.id),
                     'name': a.name,
                 }
-                for a in attendees
+                for a in event.attendees.all()[:3]
             ]
-            attendee_count = event.attendees.count() if event.attendees.exists() else 0
 
             items.append({
                 'id': str(event.id),
@@ -563,49 +616,82 @@ class AnalyticsDashboardView(APIView):
                 'venue': event.venue.name if event.venue else 'Campus Venue',
                 'image_url': cover,
                 'date_label': date_label,
-                'attendee_count': attendee_count,
+                'attendee_count': event.attendee_count_total,
                 'attendees': attendee_items,
             })
 
         return items
 
+    def _recent_announcements(self, request):
+        qs = (
+            Announcement.objects.filter(is_active=True, is_published=True)
+            .select_related('category')
+            .order_by('-created_at')[:3]
+        )
+        items = []
+        for ann in qs:
+            items.append({
+                'id': str(ann.id),
+                'title': ann.title,
+                'image': request.build_absolute_uri(ann.image.url) if ann.image else None,
+                'createdAt': ann.created_at.isoformat(),
+                'categoryDetails': {
+                    'name': ann.category.name if ann.category else 'General'
+                }
+            })
+        return items
+
     def _overview_cards(self, period, now):
+        # Optimized counts in fewer queries
+        counts = {
+            'students': User.objects.filter(is_active=True).count(),
+            'clubs': Club.objects.filter(is_active=True, status='active').count(),
+            'events': Event.objects.filter(is_active=True, start_date_time__year=now.year, start_date_time__month=now.month).count(),
+            'bookings': Booking.objects.filter(is_active=True).exclude(status='cancelled').count(),
+        }
+
         cards = [
             {
                 'id': 'overview-students',
                 'title': 'Total Students',
-                'value': str(User.objects.filter(is_active=True).count()),
+                'value': str(counts['students']),
                 'icon': 'GraduationCap',
                 'icon_bg': '#fdf8ec',
             },
             {
                 'id': 'overview-clubs',
                 'title': 'Active Clubs',
-                'value': str(Club.objects.filter(is_active=True, status='active').count()),
+                'value': str(counts['clubs']),
                 'icon': 'Users2',
                 'icon_bg': '#fdf8ec',
             },
             {
                 'id': 'overview-events',
                 'title': 'Monthly Events',
-                'value': str(Event.objects.filter(is_active=True, start_date_time__year=now.year, start_date_time__month=now.month).count()),
+                'value': str(counts['events']),
                 'icon': 'CalendarDays',
                 'icon_bg': '#fdf8ec',
             },
             {
                 'id': 'overview-bookings',
                 'title': 'Total Venue Bookings',
-                'value': str(Booking.objects.filter(is_active=True).exclude(status='cancelled').count()),
+                'value': str(counts['bookings']),
                 'icon': 'Building2',
                 'icon_bg': '#fdf8ec',
             },
         ]
 
-        # Simple trend indicator against previous month where practical.
-        current_month_users = User.objects.filter(is_active=True, created_at__year=now.year, created_at__month=now.month).count()
+        # Trend indicator logic
         prev_month = now.month - 1 if now.month > 1 else 12
         prev_year = now.year if now.month > 1 else now.year - 1
-        prev_month_users = User.objects.filter(is_active=True, created_at__year=prev_year, created_at__month=prev_month).count()
+        
+        month_stats = User.objects.filter(is_active=True).aggregate(
+            current=Count('id', filter=Q(created_at__year=now.year, created_at__month=now.month)),
+            prev=Count('id', filter=Q(created_at__year=prev_year, created_at__month=prev_month))
+        )
+        
+        current_month_users = month_stats['current'] or 0
+        prev_month_users = month_stats['prev'] or 0
 
         if prev_month_users > 0:
             delta = round(((current_month_users - prev_month_users) / prev_month_users) * 100, 1)

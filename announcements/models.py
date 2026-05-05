@@ -58,6 +58,7 @@ class Announcement(SoftDeleteModel):
         indexes = [
             models.Index(fields=['category']),
             models.Index(fields=['created_at']),
+            models.Index(fields=['is_published']),
         ]
 
     def __str__(self):

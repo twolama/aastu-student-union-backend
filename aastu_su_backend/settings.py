@@ -260,6 +260,15 @@ FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Cache configuration used by analytics dashboard response caching.
+ANALYTICS_DASHBOARD_CACHE_TTL = int(os.getenv('ANALYTICS_DASHBOARD_CACHE_TTL', '600'))
+CACHES = {
+    'default': {
+        'BACKEND': os.getenv('DJANGO_CACHE_BACKEND', 'django.core.cache.backends.locmem.LocMemCache'),
+        'LOCATION': os.getenv('DJANGO_CACHE_LOCATION', 'aastu-su-cache'),
+    }
+}
+
 
 # Django REST Framework Configuration
 REST_FRAMEWORK = {

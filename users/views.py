@@ -144,6 +144,7 @@ class CustomTokenObtainPairView(TokenObtainPairView):
                     "username": user.username,
                     "name": user.name,
                     "studentId": user.student_id,
+                    "avatar": user.avatar.url if user.avatar else None,
                     "role": user.role.slug if user.role else None,
                     "roles": [role.slug for role in user.roles.all()],
                     "permissions": frontend_permissions,
@@ -393,7 +394,11 @@ class UserViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get', 'patch'], url_path='me', permission_classes=[permissions.IsAuthenticated])
     def me(self, request: Request):
         if request.method.lower() == 'get':
-            serializer = self.get_serializer(request.user)
+            # Re-fetch the user with all necessary data for the serializer to avoid N+1 queries
+            user = User.objects.select_related('department', 'department__college') \
+                .prefetch_related('roles__groups__permissions__content_type') \
+                .get(pk=request.user.pk)
+            serializer = self.get_serializer(user)
             return Response(serializer.data)
 
         serializer = self.get_serializer(request.user, data=request.data, partial=True)

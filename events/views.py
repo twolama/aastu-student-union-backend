@@ -1,3 +1,4 @@
+from django.db.models import Q
 from django.utils import timezone
 from rest_framework import viewsets, permissions, status, serializers
 from rest_framework.exceptions import PermissionDenied
@@ -59,6 +60,19 @@ class EventViewSet(viewsets.ModelViewSet):
         if club:
             queryset = queryset.filter(organizing_club_id=club)
             
+        search = self.request.query_params.get('search')
+        if search:
+            queryset = queryset.filter(
+                Q(title__icontains=search) |
+                Q(description__icontains=search) |
+                Q(venue__name__icontains=search) |
+                Q(organizing_club__name__icontains=search)
+            )
+
+        category = self.request.query_params.get('category')
+        if category and category != 'all':
+            queryset = queryset.filter(organizing_club__category__slug=category)
+
         return queryset.order_by('start_date_time')
 
     def _assert_club_scope(self, club):
