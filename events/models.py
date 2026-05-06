@@ -77,6 +77,36 @@ class Event(SoftDeleteModel):
     def __str__(self):
         return f"{self.title} by {self.organizing_club.name}"
 
+    def get_effective_status(self):
+        """
+        Derive the current event status from its schedule, allowing manual overrides.
+        """
+        if self.is_archived:
+            return "archived"
+
+        # Allow manual override only for live-now. 
+        # Manual archiving should use the is_archived flag.
+        if self.status == "live-now":
+            return "live-now"
+
+        now = timezone.now()
+        start = self.start_date_time
+        end = self.end_date_time
+
+        if start and now < start:
+            return "upcoming"
+
+        if end and now >= end:
+            return "archived"
+
+        if start and (end is None or now >= start):
+            return "live-now"
+
+        if end and now < end:
+            return "live-now"
+
+        return self.status if self.status else "upcoming"
+
     def save(self, *args, **kwargs):
         """
         Preserve the user-selected status from API/forms.

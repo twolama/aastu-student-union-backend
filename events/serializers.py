@@ -1,3 +1,6 @@
+from datetime import datetime, time, timedelta
+import zoneinfo
+from django.utils import timezone
 from rest_framework import serializers
 from drf_spectacular.utils import extend_schema_field
 from .models import Event, EventVolunteer
@@ -46,6 +49,7 @@ class EventListSerializer(serializers.ModelSerializer):
     """
     organizing_club = ClubMinimalSerializer(read_only=True)
     venue = serializers.StringRelatedField()
+    effective_status = serializers.SerializerMethodField()
     date_day = serializers.SerializerMethodField()
     date_month = serializers.SerializerMethodField()
     attendee_count = serializers.IntegerField(source='attendees.count', read_only=True)
@@ -53,7 +57,7 @@ class EventListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Event
         fields = (
-            'id', 'title', 'short_description', 'status', 'is_mega_event',
+            'id', 'title', 'short_description', 'status', 'effective_status', 'is_mega_event',
             'is_archived', 'max_capacity',
             'organizing_club', 'venue', 'physical_location_details',
             'cover_image', 'start_date_time', 'end_date_time',
@@ -62,13 +66,34 @@ class EventListSerializer(serializers.ModelSerializer):
         )
         read_only_fields = ('id', 'created_at', 'updated_at', 'date_day', 'date_month', 'attendee_count')
 
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        # We no longer overwrite 'status' with 'effective_status' here.
+        # This allows the frontend to distinguish between the manual override 
+        # (status) and the calculated state (effective_status).
+        return data
+
+    @extend_schema_field(str)
+    def get_effective_status(self, obj):
+        return obj.get_effective_status()
+
     @extend_schema_field(str)
     def get_date_day(self, obj):
-        return obj.start_date_time.strftime("%d") if obj.start_date_time else None
+        if not obj.start_date_time:
+            return None
+        # Format the day using the project's local timezone (Africa/Addis_Ababa)
+        # so frontend and server agree on the displayed local date.
+        addis_tz = zoneinfo.ZoneInfo("Africa/Addis_Ababa")
+        local_dt = obj.start_date_time.astimezone(addis_tz)
+        return local_dt.strftime("%d")
 
     @extend_schema_field(str)
     def get_date_month(self, obj):
-        return obj.start_date_time.strftime("%b").upper() if obj.start_date_time else None
+        if not obj.start_date_time:
+            return None
+        addis_tz = zoneinfo.ZoneInfo("Africa/Addis_Ababa")
+        local_dt = obj.start_date_time.astimezone(addis_tz)
+        return local_dt.strftime("%b").upper()
 
 class EventDetailSerializer(EventListSerializer):
     """
@@ -165,6 +190,29 @@ class EventSerializer(EventDetailSerializer):
             booking_club = getattr(booking, "club", None)
             if booking_club:
                 data["organizing_club_id"] = booking_club.pk
+
+        # Derive start and end datetime from booking if not provided
+        if not data.get("start_date_time") and booking.start_date and booking.selected_slots:
+            try:
+                # Get the earliest time slot
+                start_time_str = sorted(booking.selected_slots)[0]  # e.g., "14:00"
+                hour, minute = map(int, start_time_str.split(':'))
+                start_dt = datetime.combine(booking.start_date, time(hour, minute))
+                # Make timezone-aware (UTC)
+                data["start_date_time"] = timezone.make_aware(start_dt, timezone.utc)
+            except (ValueError, IndexError, TypeError):
+                pass
+
+        if not data.get("end_date_time") and booking.end_date and booking.selected_slots:
+            try:
+                # Get the latest time slot and add 1 hour (typical slot duration)
+                end_time_str = sorted(booking.selected_slots)[-1]  # e.g., "15:00"
+                hour, minute = map(int, end_time_str.split(':'))
+                end_dt = datetime.combine(booking.end_date, time(hour, minute)) + timedelta(hours=1)
+                # Make timezone-aware (UTC)
+                data["end_date_time"] = timezone.make_aware(end_dt, timezone.utc)
+            except (ValueError, IndexError, TypeError):
+                pass
 
         return data
 
