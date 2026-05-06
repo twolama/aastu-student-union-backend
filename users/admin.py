@@ -3,7 +3,10 @@ from django.contrib import admin
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django.contrib.auth.admin import UserAdmin
 from django.utils.translation import gettext_lazy as _
+from import_export.admin import ImportExportModelAdmin
+
 from .models import User, Role, PasswordResetOTP
+from .resources import UserImportResource
 
 class RoleAdminForm(forms.ModelForm):
     users = forms.ModelMultipleChoiceField(
@@ -54,7 +57,9 @@ def make_inactive(modeladmin, request, queryset):
     queryset.update(is_active=False)
 
 @admin.register(User)
-class CustomUserAdmin(UserAdmin):
+class CustomUserAdmin(ImportExportModelAdmin, UserAdmin):
+    resource_classes = [UserImportResource]
+    change_list_template = 'admin/users/user_change_list.html'
     list_display = ['username', 'name', 'student_id', 'roles_list', 'department', 'is_staff', 'is_active']
     list_display_links = ['username', 'name']
     list_filter = ['roles', 'department', 'is_staff', 'is_active']
@@ -65,6 +70,12 @@ class CustomUserAdmin(UserAdmin):
 
     readonly_fields = ['id', 'created_at', 'updated_at', 'deleted_at']
     autocomplete_fields = ['roles', 'department']
+
+    def has_import_permission(self, request):
+        return request.user.has_perm('users.add_user') or request.user.has_perm('users.change_user')
+
+    def has_export_permission(self, request):
+        return request.user.has_perm('users.view_user') or request.user.has_perm('users.change_user')
 
     fieldsets = (
         (None, {'fields': ('username', 'password')}),

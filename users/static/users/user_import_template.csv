@@ -1,0 +1,3 @@
+username,name,student_id,email,phone_number,department,roles,dorm_block,dorm_room,bio,is_active
+,New Import User,STU-0002,new@example.com,0911000111,Software Engineering,member,BlockA,101,"Imported via admin",True
+,Existing User,STU-0001,existing@example.com,0911000222,Software Engineering,member,BlockB,202,"This row will be skipped if user exists",True

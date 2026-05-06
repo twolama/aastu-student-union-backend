@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     'corsheaders',
     'django_filters',
+    'import_export',
     'rest_framework_simplejwt',
     'rest_framework_simplejwt.token_blacklist',
     'cloudinary',

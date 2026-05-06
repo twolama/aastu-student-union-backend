@@ -1,0 +1,13 @@
+{% extends "admin/change_list.html" %}
+{% load static %}
+
+{% block object-tools %}
+  <div class="object-tools">
+    <ul class="object-tools">
+      <li>
+        <a href="{% static 'users/user_import_template.csv' %}" class="addlink">Download import template</a>
+      </li>
+    </ul>
+  </div>
+  {{ block.super }}
+{% endblock %}
