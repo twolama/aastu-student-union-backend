@@ -33,38 +33,96 @@ class CloudinaryStorage(FileSystemStorage):
     def _save(self, name, content):
         name = self._normalize_name(name)
         base_name, ext = os.path.splitext(name)
-        ext = ext.lstrip('.')
+        ext = ext.lstrip('.').lower()
+        
+        # Determine resource type based on file extension
+        # PDFs and documents should use 'raw' type for proper MIME type handling
+        if ext in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip']:
+            resource_type = 'raw'
+        else:
+            resource_type = 'image'
+        
+        # For raw files, include extension in public_id (crucial for proper URL generation)
+        public_id = base_name
+        if resource_type == 'raw' and ext:
+            public_id = f"{base_name}.{ext}"
+        
         upload_kwargs = {
-            'public_id': base_name,
-            'resource_type': 'auto',
+            'public_id': public_id,
+            'resource_type': resource_type,
+            'overwrite': True,
+            'access_mode': 'public',
         }
-        if ext:
-            upload_kwargs['format'] = ext
+            
         response = cloudinary.uploader.upload(content, **upload_kwargs)
+        # Return the public_id (which includes extension for raw files)
         return response['public_id']
 
     def url(self, name) -> str:
         name = self._normalize_name(name)
+        base_name, ext = os.path.splitext(name)
+        ext = ext.lstrip('.').lower()
+        
+        # Determine resource type based on file extension
+        if ext in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip']:
+            resource_type = 'raw'
+            # Ensure extension is in name for raw files
+            if ext and not name.lower().endswith(f'.{ext}'):
+                name = f"{base_name}.{ext}"
+        else:
+            resource_type = 'image'
+
+        # Try to fetch the actual resource from Cloudinary API to get the correct URL with version
         try:
-            resource = cloudinary_api.resource(name)
+            resource = cloudinary_api.resource(name, resource_type=resource_type)
             secure_url = resource.get('secure_url')
             if secure_url:
                 return secure_url
-            url = resource.get('url')
-            if url:
-                return url
         except Exception:
+            # Fallback if API call fails
             pass
-        return cloudinary.utils.cloudinary_url(name, secure=True)[0]
+
+        # Fallback: generate URL using cloudinary utility
+        # Note: This may not have the correct version for already-uploaded files
+        return cloudinary.utils.cloudinary_url(
+            name,
+            resource_type=resource_type,
+            secure=True,
+            sign_url=False,
+        )[0]
 
     def exists(self, name):
         name = self._normalize_name(name)
-        try:
-            cloudinary_api.resource(name)
-            return True
-        except Exception:
-            return False
+        base_name, ext = os.path.splitext(name)
+        ext = ext.lstrip('.').lower()
+        
+        # Check with appropriate resource type
+        if ext in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip']:
+            resource_types = ['raw']
+        else:
+            resource_types = ['image', 'raw', 'video']
+        
+        for r_type in resource_types:
+            try:
+                cloudinary_api.resource(name, resource_type=r_type)
+                return True
+            except Exception:
+                continue
+        return False
 
     def delete(self, name):
         name = self._normalize_name(name)
-        cloudinary.uploader.destroy(name)
+        base_name, ext = os.path.splitext(name)
+        ext = ext.lstrip('.').lower()
+        
+        # Delete with appropriate resource type
+        if ext in ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'zip']:
+            resource_type = 'raw'
+        else:
+            resource_type = 'image'
+        
+        response = cloudinary.uploader.destroy(name, resource_type=resource_type)
+        if response.get('result') != 'ok':
+            # Try alternate resource type as fallback
+            alt_resource_type = 'raw' if resource_type == 'image' else 'image'
+            cloudinary.uploader.destroy(name, resource_type=alt_resource_type)

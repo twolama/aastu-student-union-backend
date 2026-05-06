@@ -75,6 +75,10 @@ class Club(SoftDeleteModel):
     # Store social/external links (website, externalMembership)
     links = models.JSONField(default=dict, blank=True)
 
+    # Club Proposal File
+    proposal_file = models.FileField(upload_to='clubs/proposals/', null=True, blank=True)
+    show_proposal = models.BooleanField(default=False)
+
     class Meta(SoftDeleteModel.Meta):
         verbose_name = 'Club'
         verbose_name_plural = 'Clubs'

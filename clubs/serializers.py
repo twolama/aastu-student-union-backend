@@ -45,7 +45,7 @@ class ClubListSerializer(serializers.ModelSerializer):
             'id', 'name', 'status', 'category_name', 'department_name',
             'location_label', 'logo_label', 'logo', 'cover_image', 
             'president_name', 'advisor_name', 'department', 'description',
-            'member_count'
+            'member_count', 'proposal_file', 'show_proposal'
         )
         read_only_fields = ('id', 'category_name', 'department_name', 'president_name', 'advisor_name')
 
@@ -107,7 +107,7 @@ class ClubDetailSerializer(serializers.ModelSerializer):
             'department', 'department_details',
             'location_label', 'logo_label', 'cover_image', 'logo', 'description', 
             'president', 'president_details', 'advisor', 'advisor_details',
-            'links', 'created_at', 'updated_at'
+            'links', 'proposal_file', 'show_proposal', 'created_at', 'updated_at'
         )
         read_only_fields = (
             'id', 'created_at', 'updated_at', 
