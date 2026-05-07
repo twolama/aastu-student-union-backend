@@ -257,9 +257,14 @@ class AnalyticsDashboardView(APIView):
         if period not in self.PERIOD_CHOICES:
             period = 'last-8-months'
 
+        # Determine access level
+        is_admin = request.user.is_staff or request.user.is_superuser or request.user.has_perm('analytics.view_analytics')
+
         cache_ttl = int(getattr(settings, 'ANALYTICS_DASHBOARD_CACHE_TTL', 600))
-        # Share cache across users who have the same access level
-        cache_key = f"analytics-dashboard:shared:{period}"
+        # Share cache across users who have the same access level (admin vs member)
+        access_level = "admin" if is_admin else "member"
+        cache_key = f"analytics-dashboard:{access_level}:{period}"
+        
         if cache_ttl > 0:
             cached_payload = cache.get(cache_key)
             if cached_payload is not None:
@@ -268,17 +273,25 @@ class AnalyticsDashboardView(APIView):
         now = timezone.now()
         labels = self._period_labels(period, now)
 
+        # Base components visible to everyone
         registration_trends = self._registration_trends(period, labels, now)
         occupancy_trends = self._occupancy_trends(period, labels, now)
         club_breakdown = self._club_breakdown()
         event_distribution = self._event_distribution()
         venue_kpis = self._venue_kpis(now)
         venue_stats = self._venue_stats()
-        club_stats = self._club_stats()
-        recent_activity = self._recent_activity(now)
         upcoming_mega_events = self._upcoming_mega_events(request, now)
         recent_announcements = self._recent_announcements(request)
         overview = self._overview_cards(period, now)
+
+        # Restricted components (redacted for non-admins)
+        if is_admin:
+            recent_activity = self._recent_activity(now)
+            club_stats = self._club_stats()
+        else:
+            # Members see empty/limited versions of sensitive admin components
+            recent_activity = []
+            club_stats = []
 
         response_data = {
             'period': period,
@@ -293,7 +306,6 @@ class AnalyticsDashboardView(APIView):
             'recent_activity': recent_activity,
             'upcoming_mega_events': upcoming_mega_events,
             'recent_announcements': recent_announcements,
-            'overview': overview,
         }
 
         payload = {
