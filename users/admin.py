@@ -60,11 +60,11 @@ def make_inactive(modeladmin, request, queryset):
 class CustomUserAdmin(ImportExportModelAdmin, UserAdmin):
     resource_classes = [UserImportResource]
     change_list_template = 'admin/users/user_change_list.html'
-    list_display = ['username', 'name', 'student_id', 'roles_list', 'department', 'is_staff', 'is_active']
+    list_display = ['username', 'name', 'student_id', 'roles_list', 'department', 'is_staff', 'is_active', 'date_joined']
     list_display_links = ['username', 'name']
-    list_filter = ['roles', 'department', 'is_staff', 'is_active']
-    search_fields = ['username', 'name', 'student_id', 'email']
-    ordering = ['-created_at']
+    list_filter = ['roles', 'department', 'is_staff', 'is_active', 'date_joined']
+    search_fields = ['username', 'name', 'student_id', 'email', 'phone_number', 'department__name']
+    ordering = ['-date_joined']
     list_per_page = 25
     actions = [make_active, make_inactive]
 
@@ -97,7 +97,21 @@ class CustomUserAdmin(ImportExportModelAdmin, UserAdmin):
 
     @admin.display(description='Roles')
     def roles_list(self, obj):
-        return ", ".join(obj.roles.values_list('name', flat=True)) or "No roles"
+        from django.utils.html import format_html
+        roles = obj.roles.all()
+        if not roles:
+            return format_html('<span style="color: #999;">No roles</span>')
+        
+        badges = []
+        for role in roles:
+            color = "#2563eb" if role.is_staff_role else "#64748b"
+            bg = "#eff6ff" if role.is_staff_role else "#f8fafc"
+            badges.append(
+                f'<span style="background: {bg}; color: {color}; border: 1px solid {color}40; '
+                f'padding: 2px 8px; border-radius: 12px; font-size: 0.85em; margin-right: 4px; '
+                f'white-space: nowrap;">{role.name}</span>'
+            )
+        return format_html("".join(badges))
 
     def get_queryset(self, request):
         return super().get_queryset(request).prefetch_related('roles', 'department')

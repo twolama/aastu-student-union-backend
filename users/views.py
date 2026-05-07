@@ -36,10 +36,22 @@ logger = logging.getLogger(__name__)
 
 
 def _send_user_invitation_email(user_id: str, recipient_email: str, recipient_name: str, temporary_password: str) -> None:
+    """
+    Send a temporary password invitation email to a newly created user.
+    Includes detailed logging for diagnosis and retry logic with exponential backoff.
+    """
     if not recipient_email:
         logger.warning(
             "Skipping invitation email because recipient email is empty",
             extra={"user_id": user_id},
+        )
+        return
+
+    # Check if email is properly configured
+    if not settings.EMAIL_HOST_USER or not settings.EMAIL_HOST_PASSWORD:
+        logger.error(
+            "Email not sent: EMAIL_HOST_USER or EMAIL_HOST_PASSWORD not configured",
+            extra={"user_id": user_id, "email": recipient_email},
         )
         return
 
@@ -63,8 +75,16 @@ def _send_user_invitation_email(user_id: str, recipient_email: str, recipient_na
         'current_year': timezone.now().year,
     }
 
-    text_message = render_to_string('users/emails/new_account_invitation.txt', context)
-    html_message = render_to_string('users/emails/new_account_invitation.html', context)
+    try:
+        text_message = render_to_string('users/emails/new_account_invitation.txt', context)
+        html_message = render_to_string('users/emails/new_account_invitation.html', context)
+    except Exception as e:
+        logger.error(
+            f"Failed to render email templates: {str(e)}",
+            extra={"user_id": user_id, "email": recipient_email},
+            exc_info=True,
+        )
+        return
 
     from_email = settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL
 
@@ -72,6 +92,10 @@ def _send_user_invitation_email(user_id: str, recipient_email: str, recipient_na
     max_attempts = 3
     for attempt in range(1, max_attempts + 1):
         try:
+            logger.info(
+                f"Attempting to send invitation email (attempt {attempt}/{max_attempts})",
+                extra={"user_id": user_id, "email": recipient_email, "from_email": from_email},
+            )
             email_message = EmailMultiAlternatives(
                 subject,
                 text_message,
@@ -79,19 +103,26 @@ def _send_user_invitation_email(user_id: str, recipient_email: str, recipient_na
                 [recipient_email],
             )
             email_message.attach_alternative(html_message, 'text/html')
-            email_message.send(fail_silently=False)
+            result = email_message.send(fail_silently=False)
             logger.info(
-                "Invitation email sent",
+                f"Invitation email sent successfully (result: {result})",
                 extra={"user_id": user_id, "email": recipient_email, "attempt": attempt},
             )
             return
-        except Exception:
-            logger.exception(
-                "Failed to send invitation email for newly created user",
+        except Exception as e:
+            logger.warning(
+                f"Failed to send invitation email (attempt {attempt}/{max_attempts}): {str(e)}",
                 extra={"user_id": user_id, "email": recipient_email, "attempt": attempt},
+                exc_info=True,
             )
             if attempt < max_attempts:
                 time.sleep(1.5 * attempt)
+    
+    # If all retries failed, log final error
+    logger.error(
+        f"Failed to send invitation email after {max_attempts} attempts",
+        extra={"user_id": user_id, "email": recipient_email},
+    )
 
 
 class RoleViewSet(viewsets.ModelViewSet):
@@ -407,23 +438,51 @@ class UserViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     def perform_create(self, serializer):
+        """
+        Create a new user and send an invitation email with temporary password.
+        Email is sent asynchronously in background daemon thread for instant response.
+        """
         with transaction.atomic():
             user = serializer.save()
             temp_password = secrets.token_urlsafe(9)
+
+            logger.info(
+                "Creating new user, will send invitation email",
+                extra={"user_id": str(user.pk), "email": user.email, "name": user.name},
+            )
 
             user.set_password(temp_password)
             user.must_change_password = True
             user.save(update_fields=['password', 'must_change_password'])
 
             def dispatch_invitation_email() -> None:
+                try:
+                    logger.info(
+                        "Dispatching invitation email in background daemon thread",
+                        extra={"user_id": str(user.pk), "email": user.email},
+                    )
+                    _send_user_invitation_email(
+                        str(user.pk), user.email, user.name, temp_password
+                    )
+                except Exception as e:
+                    logger.error(
+                        f"Error in email dispatch thread: {str(e)}",
+                        extra={"user_id": str(user.pk), "email": user.email},
+                        exc_info=True,
+                    )
+
+            # Start background daemon thread for fire-and-forget behavior
+            # Returns immediately without waiting for email to send
+            def start_email_thread() -> None:
                 thread = threading.Thread(
-                    target=_send_user_invitation_email,
-                    args=(str(user.pk), user.email, user.name, temp_password),
-                    daemon=False,
+                    target=dispatch_invitation_email,
+                    daemon=True,  # Daemon thread: returns instantly, doesn't block
+                    name=f"email-invitation-{user.pk}",
                 )
                 thread.start()
 
-            transaction.on_commit(dispatch_invitation_email)
+            # Use transaction.on_commit to ensure user is saved before email thread starts
+            transaction.on_commit(start_email_thread)
 
     def perform_destroy(self, instance):
         if instance.is_superuser:
