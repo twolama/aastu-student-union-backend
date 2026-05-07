@@ -180,17 +180,20 @@ class UserImportResource(resources.ModelResource):
     def after_init_instance(self, instance, new, row, **kwargs):
         """
         Mark whether this instance is new or existing.
-        For new instances, generate a temporary password and set default roles.
+        Ensures default roles are set and prevents clearing existing roles if CSV column is empty.
         """
         instance._import_was_existing = not new
         
+        # Determine if roles are missing in the CSV
+        roles_raw = row.get('roles')
+        roles_missing = not roles_raw or not str(roles_raw).strip()
+
         if new:
-            # Generate temporary password for new users
+            # 1. Generate temporary password for new users
             instance._import_temp_password = secrets.token_urlsafe(9)
             
-            # Set default role in row if missing, so ManyToManyWidget can process it
-            roles_raw = row.get('roles')
-            if not roles_raw or not str(roles_raw).strip():
+            # 2. Set default 'member' role in row if missing
+            if roles_missing:
                 row['roles'] = 'member'
                 logger.info(f"Set default 'member' role in row for new user: {row.get('username') or row.get('email')}")
 
@@ -199,7 +202,19 @@ class UserImportResource(resources.ModelResource):
                 extra={"email": instance.email, "username": instance.username},
             )
         else:
+            # EXISTING USER
             instance._import_temp_password = None
+            
+            if roles_missing:
+                # PROTECTION: ManyToManyWidget clears roles if the CSV column is empty.
+                # To prevent this, we populate the row with the user's CURRENT roles.
+                # If they have no roles, we default to 'member'.
+                current_roles = list(instance.roles.values_list('slug', flat=True))
+                if current_roles:
+                    row['roles'] = ",".join(current_roles)
+                else:
+                    row['roles'] = 'member'
+                logger.info(f"Preserving existing roles for user {instance.email} because CSV roles column is empty.")
 
     def skip_row(self, instance, original, row, import_validation_errors=None):
         """
@@ -236,29 +251,35 @@ class UserImportResource(resources.ModelResource):
     def before_save_instance(self, instance, row, **kwargs):
         """
         Ensure required fields are set and track new users for email sending.
+        Prevent student_id from being cleared or becoming a duplicate empty string.
         """
-        if getattr(instance, '_import_was_existing', False):
-            # For existing users, we allow the update but don't change password
+        is_existing = getattr(instance, '_import_was_existing', False)
+        
+        # 1. Protect student_id (cannot be empty due to unique constraint)
+        if not instance.student_id:
+            if is_existing:
+                # If existing user, restore their original student_id from the DB
+                # This prevents the CSV from accidentally clearing a unique field.
+                original_student_id = User.objects.filter(pk=instance.pk).values_list('student_id', flat=True).first()
+                instance.student_id = original_student_id
+                logger.info(f"Retained original student_id '{instance.student_id}' for existing user {instance.email}")
+            else:
+                # For NEW users, generate a unique student_id
+                fallback = instance.username or instance.email or f"id-{uuid4().hex[:8]}"
+                candidate = fallback
+                counter = 0
+                while User.objects.filter(student_id=candidate).exists():
+                    counter += 1
+                    candidate = f"{fallback}-{counter}"
+                instance.student_id = candidate
+                logger.info(f"Generated student_id '{instance.student_id}' for new user")
+
+        if is_existing:
+            # For existing users, we are done with custom logic
             logger.info(f"Updating existing user: {instance.email}")
             return
         
         # NEW USER LOGIC
-        # 1. Ensure student_id is set (cannot be empty due to unique constraint)
-        if not instance.student_id:
-            # Generate a fallback student_id if missing in CSV
-            # Use username or email as base, otherwise random token
-            fallback = instance.username or instance.email or f"id-{uuid4().hex[:8]}"
-            
-            # Ensure uniqueness in database
-            candidate = fallback
-            counter = 0
-            while User.objects.filter(student_id=candidate).exists():
-                counter += 1
-                candidate = f"{fallback}-{counter}"
-            
-            instance.student_id = candidate
-            logger.info(f"Generated student_id for new user: {instance.student_id}")
-
         # 2. Ensure username is set (AbstractUser requirement)
         if not instance.username:
             instance.username = instance.student_id or instance.email
