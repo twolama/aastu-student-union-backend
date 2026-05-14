@@ -216,13 +216,23 @@ def send_password_reset_otp(user):
         "This code expires in 15 minutes. If you did not request this, please ignore this email."
     )
 
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [user.email],
-        fail_silently=False,
-    )
+    def dispatch_reset_email():
+        try:
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+            logger.info(f"Password reset email sent to {user.email}")
+        except Exception as e:
+            logger.error(f"Failed to send password reset email to {user.email}: {str(e)}", exc_info=True)
+
+    # Dispatch email in a background thread to avoid blocking the request
+    # and triggering worker timeouts on platforms like Render.
+    thread = threading.Thread(target=dispatch_reset_email, daemon=True)
+    thread.start()
 
 class ForgotPasswordView(APIView):
     """

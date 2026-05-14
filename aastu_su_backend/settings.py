@@ -249,9 +249,17 @@ EMAIL_BACKEND = os.getenv('EMAIL_BACKEND') or (
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True') == 'True'
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False') == 'True'
+EMAIL_TIMEOUT = 10
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'AASTU SU <noreply@aastusu.com>')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL') or EMAIL_HOST_USER or 'AASTU SU <noreply@aastusu.com>'
+
+# Log email configuration for debugging (especially on Render)
+import logging
+logger = logging.getLogger(__name__)
+if not DEBUG:
+    logger.warning(f"Email Configuration - HOST: {EMAIL_HOST}, PORT: {EMAIL_PORT}, USER: {EMAIL_HOST_USER}, BACKEND: {EMAIL_BACKEND}")
 
 # Frontend URL for password reset links
 FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
