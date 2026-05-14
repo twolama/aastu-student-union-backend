@@ -249,6 +249,7 @@ class SystemStatsResponseSerializer(serializers.Serializer):
 class HealthComponentSerializer(serializers.Serializer):
     name = serializers.CharField()
     status = serializers.CharField()
+    is_critical = serializers.BooleanField(default=True)
 
 class HealthCheckDataSerializer(serializers.Serializer):
     success = serializers.BooleanField()
@@ -258,19 +259,19 @@ class HealthCheckDataSerializer(serializers.Serializer):
 
 class HealthCheckResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
-
+    message = serializers.CharField()
+    data = HealthCheckDataSerializer()
+    statusCode = serializers.IntegerField()
+    error = serializers.CharField(allow_null=True)
 
 class UserPermissionsDataSerializer(serializers.Serializer):
     userId = serializers.UUIDField()
     permissions = serializers.ListField(child=serializers.CharField())
     djangoPermissions = serializers.ListField(child=serializers.CharField())
 
-
 class UserPermissionsResponseSerializer(serializers.Serializer):
     success = serializers.BooleanField()
     message = serializers.CharField()
     data = UserPermissionsDataSerializer()
-    message = serializers.CharField()
-    response_data = HealthCheckDataSerializer(source='data')
     statusCode = serializers.IntegerField()
     error = serializers.CharField(allow_null=True)

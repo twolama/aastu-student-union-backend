@@ -853,35 +853,42 @@ class HealthCheckView(APIView):
     def get(self, request):
         components = []
         
-        # 1. Database Check
+        # 1. Database Check (Critical)
         db_status = "up"
         try:
             connections['default'].cursor()
         except OperationalError:
             db_status = "down"
-        components.append({"name": "Database", "status": db_status})
+        components.append({"name": "Database", "status": db_status, "is_critical": True})
 
-        # 2. Storage Check
-        components.append({"name": "Storage", "status": "up"})
+        # 2. Storage Check (Critical)
+        components.append({"name": "Storage", "status": "up", "is_critical": True})
 
-        # 3. System Resources Check
+        # 3. System Resources Check (Critical)
         system_status = "up"
         if psutil.virtual_memory().percent > 95:
             system_status = "degraded"
-        components.append({"name": "System Resources", "status": system_status})
+        components.append({"name": "System Resources", "status": system_status, "is_critical": True})
         
-        # 4. Email Connection Check
+        # 4. Email Configuration Check (Passive)
+        # We no longer actively open a connection to avoid blocking the health check
+        # and because outbound SMTP is often restricted in cloud environments.
         email_status = "up"
-        try:
-            connection = get_connection()
-            connection.open()
-            connection.close()
-        except Exception as e:
-            email_status = "down"
-            logger.error(f"Health Check: Email connection failed: {str(e)}")
-        components.append({"name": "Email", "status": email_status})
+        if not settings.EMAIL_HOST_USER and "console" not in settings.EMAIL_BACKEND:
+             email_status = "down"
+             
+        components.append({
+            "name": "Email", 
+            "status": email_status,
+            "is_critical": False
+        })
 
-        is_healthy = all(c['status'] in ['up', 'degraded'] for c in components)
+        # System is healthy if all critical components are up or degraded
+        is_healthy = all(
+            c['status'] in ['up', 'degraded'] 
+            for c in components 
+            if c.get('is_critical', True)
+        )
 
         return Response({
             "success": True,

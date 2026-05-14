@@ -242,7 +242,7 @@ STORAGES = {
 
 # Email Configuration
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND') or (
-    'django.core.mail.backends.smtp.EmailBackend'
+    'core.email_backend.IPv4EmailBackend'
     if os.getenv('EMAIL_HOST_USER')
     else 'django.core.mail.backends.console.EmailBackend'
 )
