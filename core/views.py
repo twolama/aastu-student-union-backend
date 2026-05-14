@@ -1,3 +1,4 @@
+import logging
 import psutil
 import platform
 import time
@@ -19,6 +20,7 @@ from drf_spectacular.types import OpenApiTypes
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
+from django.core.mail import get_connection
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets
 from rest_framework.decorators import action
@@ -34,6 +36,9 @@ from clubs.models import Club
 from events.models import Event
 from bookings.models import Booking
 from venues.models import Venue
+from .models import College, Department, SystemNotification, NotificationReadState
+
+logger = logging.getLogger(__name__)
 
 
 class CollegeViewSet(viewsets.ModelViewSet):
@@ -864,6 +869,17 @@ class HealthCheckView(APIView):
         if psutil.virtual_memory().percent > 95:
             system_status = "degraded"
         components.append({"name": "System Resources", "status": system_status})
+        
+        # 4. Email Connection Check
+        email_status = "up"
+        try:
+            connection = get_connection()
+            connection.open()
+            connection.close()
+        except Exception as e:
+            email_status = "down"
+            logger.error(f"Health Check: Email connection failed: {str(e)}")
+        components.append({"name": "Email", "status": email_status})
 
         is_healthy = all(c['status'] in ['up', 'degraded'] for c in components)
 

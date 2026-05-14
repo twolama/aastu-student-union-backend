@@ -86,7 +86,7 @@ def _send_user_invitation_email(user_id: str, recipient_email: str, recipient_na
         )
         return
 
-    from_email = settings.EMAIL_HOST_USER or settings.DEFAULT_FROM_EMAIL
+    from_email = settings.DEFAULT_FROM_EMAIL or settings.EMAIL_HOST_USER
 
     # Retry a few times to survive transient SMTP/network hiccups.
     max_attempts = 3
