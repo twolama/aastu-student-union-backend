@@ -19,8 +19,18 @@ class IPv4EmailBackend(EmailBackend):
 
         socket.getaddrinfo = ipv4_getaddrinfo
         try:
-            logger.info(f"Attempting to connect to SMTP host: {self.host}:{self.port} (Forced IPv4)")
+            logger.info(
+                f"SMTP Connection Attempt - Host: {self.host}, Port: {self.port}, "
+                f"TLS: {self.use_tls}, SSL: {self.use_ssl} (Forced IPv4)"
+            )
             return super()._connect()
+        except Exception as e:
+            logger.error(
+                f"SMTP Connection Failed: {str(e)} - Check your Render environment variables "
+                f"for EMAIL_PORT, EMAIL_HOST_USER, and EMAIL_HOST_PASSWORD.",
+                exc_info=True
+            )
+            raise
         finally:
             # Restore the original getaddrinfo
             socket.getaddrinfo = original_getaddrinfo
